@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Payroll Management')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Payroll & Salary Management</h3>
+                        <p class="text-muted mb-0">Generate monthly employee salary slips, process payouts, and manage payroll.</p>
+                    </div>
+                    <a th:href="@{/salary/create}" class="btn btn-primary-custom">
+                        <i class="bi bi-plus-lg me-1"></i> Generate Salary Slip
+                    </a>
+                </div>
+
+                <!-- Filter -->
+                <div class="card custom-table-card p-3 mb-4">
+                    <form th:action="@{/salary/all}" method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Employee</label>
+                            <select class="form-select" name="employeeId">
+                                <option value="">All Employees</option>
+                                <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.fullName + ' (' + emp.employeeCode + ')'}" th:selected="${emp.id == employeeId}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Department</label>
+                            <select class="form-select" name="departmentId">
+                                <option value="">All Departments</option>
+                                <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}" th:selected="${dept.id == departmentId}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted">Pay Month (YYYY-MM)</label>
+                            <input type="text" class="form-control" name="payMonth" th:value="${payMonth}" placeholder="2026-07">
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary-custom w-100"><i class="bi bi-search"></i></button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Salary Table -->
+                <div class="card custom-table-card">
+                    <div class="table-responsive">
+                        <table class="table custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Employee Name</th>
+                                    <th>Department</th>
+                                    <th>Pay Month</th>
+                                    <th>Basic</th>
+                                    <th>Allowances</th>
+                                    <th>Deductions & Tax</th>
+                                    <th>Net Salary</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="sal : ${salaryPage.content}">
+                                    <td class="fw-semibold text-primary" th:text="${sal.employeeCode}">EMP001</td>
+                                    <td th:text="${sal.employeeName}">Alex Johnson</td>
+                                    <td th:text="${sal.departmentName != null ? sal.departmentName : '-'}">IT</td>
+                                    <td class="fw-bold" th:text="${sal.payMonth}">2026-07</td>
+                                    <td th:text="'$' + ${sal.basicSalary}">$5000</td>
+                                    <td th:text="'$' + ${sal.hra + sal.da + sal.bonus + sal.incentives}">$1000</td>
+                                    <td class="text-danger" th:text="'$' + ${sal.deductions + sal.tax}">$500</td>
+                                    <td class="fw-bold text-success" th:text="'$' + ${sal.netSalary}">$5500</td>
+                                    <td>
+                                        <span class="badge bg-success" th:text="${sal.paymentStatus}">PAID</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            <a th:href="@{/salary/slip/{id}(id=${sal.id})}" class="btn btn-sm btn-light border" title="View Payslip"><i class="bi bi-receipt"></i></a>
+                                            <a th:href="@{/salary/edit/{id}(id=${sal.id})}" class="btn btn-sm btn-light border" title="Edit"><i class="bi bi-pencil"></i></a>
+                                            <form th:action="@{/salary/delete/{id}(id=${sal.id})}" method="post" onsubmit="return confirm('Are you sure you want to delete this salary record?');">
+                                                <button type="submit" class="btn btn-sm btn-light border text-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr th:if="${salaryPage.totalElements == 0}">
+                                    <td colspan="10" class="text-center text-muted py-4">No salary slips found matching search criteria.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

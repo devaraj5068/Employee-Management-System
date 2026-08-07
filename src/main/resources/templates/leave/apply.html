@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Apply Leave')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <!-- Breadcrumb Navigation -->
+                <nav aria-label="breadcrumb" class="mb-3">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a th:href="@{/dashboard}"><i class="bi bi-house me-1"></i> Dashboard</a></li>
+                        <li class="breadcrumb-item"><a th:href="@{/leave/history}">Leave Management</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Apply Leave</li>
+                    </ol>
+                </nav>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1"><i class="bi bi-calendar2-plus me-2 text-primary"></i> Leave Application</h3>
+                        <p class="text-muted mb-0">Submit a leave request for manager or HR approval.</p>
+                    </div>
+                    <a th:href="@{/leave/history}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Leave History
+                    </a>
+                </div>
+
+                <!-- Leave Balance Summary Cards -->
+                <div class="row g-3 mb-4" th:if="${leaveBalance != null}">
+                    <div class="col-md-3 col-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon primary"><i class="bi bi-calendar-check"></i></div>
+                                <div>
+                                    <div class="text-muted small">Total Annual Quota</div>
+                                    <div class="fs-4 fw-bold text-dark" th:text="${leaveBalance.totalLeave}">24</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon success"><i class="bi bi-check-circle"></i></div>
+                                <div>
+                                    <div class="text-muted small">Used Leave</div>
+                                    <div class="fs-4 fw-bold text-success" th:text="${leaveBalance.usedLeave}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon warning"><i class="bi bi-hourglass-split"></i></div>
+                                <div>
+                                    <div class="text-muted small">Pending Approvals</div>
+                                    <div class="fs-4 fw-bold text-warning" th:text="${leaveBalance.pendingLeave}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon info"><i class="bi bi-pie-chart"></i></div>
+                                <div>
+                                    <div class="text-muted small">Remaining Balance</div>
+                                    <div class="fs-4 fw-bold text-info" th:text="${leaveBalance.remainingLeave}">24</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Application Form Card -->
+                <div class="card custom-table-card p-4 mx-auto" style="max-width: 700px;">
+                    <form th:action="@{/leave/apply}" th:object="${leaveRequest}" method="post">
+
+                        <div class="row g-3">
+                            <!-- Employee Select (For Admin / HR) -->
+                            <div class="col-12" th:if="${#authorization.expression('hasAnyRole(''ADMIN'', ''HR'')')}">
+                                <label for="employeeSelect" class="form-label font-weight-semibold">Select Employee *</label>
+                                <select id="employeeSelect" class="form-select" th:field="*{employeeId}" required>
+                                    <option value="">-- Select Employee --</option>
+                                    <option th:each="e : ${employees}" th:value="${e.id}" th:text="${e.fullName + ' (' + e.employeeCode + ')'}"></option>
+                                </select>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('employeeId')}" th:errors="*{employeeId}"></div>
+                            </div>
+
+                            <!-- Hidden Employee ID (For Regular Employees) -->
+                            <div th:unless="${#authorization.expression('hasAnyRole(''ADMIN'', ''HR'')')}">
+                                <input type="hidden" th:field="*{employeeId}" />
+                            </div>
+
+                            <!-- Leave Type -->
+                            <div class="col-12">
+                                <label for="leaveType" class="form-label font-weight-semibold">Leave Type *</label>
+                                <select id="leaveType" class="form-select" th:field="*{leaveType}" required>
+                                    <option value="">-- Choose Leave Type --</option>
+                                    <option th:each="lt : ${leaveTypes}" th:value="${lt}" th:text="${lt}"></option>
+                                </select>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('leaveType')}" th:errors="*{leaveType}"></div>
+                            </div>
+
+                            <!-- Start Date -->
+                            <div class="col-md-6">
+                                <label for="startDate" class="form-label font-weight-semibold">Start Date *</label>
+                                <input type="date" id="startDate" class="form-control" th:field="*{startDate}" required>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('startDate')}" th:errors="*{startDate}"></div>
+                            </div>
+
+                            <!-- End Date -->
+                            <div class="col-md-6">
+                                <label for="endDate" class="form-label font-weight-semibold">End Date *</label>
+                                <input type="date" id="endDate" class="form-control" th:field="*{endDate}" required>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('endDate')}" th:errors="*{endDate}"></div>
+                            </div>
+
+                            <!-- Reason -->
+                            <div class="col-12">
+                                <label for="reason" class="form-label font-weight-semibold">Reason for Leave *</label>
+                                <textarea id="reason" class="form-control" th:field="*{reason}" rows="4" placeholder="Enter clear reason for requesting leave..." required></textarea>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-end gap-2 border-top pt-3 mt-4">
+                            <a th:href="@{/leave/history}" class="btn btn-light border px-4">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary-custom px-4">
+                                <i class="bi bi-send me-1"></i> Submit Leave Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

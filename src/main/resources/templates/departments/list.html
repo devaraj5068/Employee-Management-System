@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Departments')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Department Management</h3>
+                        <p class="text-muted mb-0">Manage organizational departments and office locations.</p>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Add Department Form -->
+                    <div class="col-lg-4">
+                        <div class="card custom-table-card p-4">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-plus-circle me-2"></i>Add Department</h5>
+                            <form th:action="@{/departments/add}" th:object="${departmentDto}" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-semibold">Department Code *</label>
+                                    <input type="text" class="form-control" th:field="*{code}" placeholder="e.g. DEP-ENG" required>
+                                    <div class="text-danger small" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-semibold">Department Name *</label>
+                                    <input type="text" class="form-control" th:field="*{name}" placeholder="Engineering" required>
+                                    <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-semibold">Location</label>
+                                    <input type="text" class="form-control" th:field="*{location}" placeholder="Building A, 3rd Floor">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-semibold">Description</label>
+                                    <textarea class="form-control" th:field="*{description}" rows="3" placeholder="Department responsibilities..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary-custom w-100"><i class="bi bi-save me-1"></i> Save Department</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Departments List -->
+                    <div class="col-lg-8">
+                        <div class="card custom-table-card">
+                            <div class="table-responsive">
+                                <table class="table custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Department Name</th>
+                                            <th>Location</th>
+                                            <th>Employees</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="dept : ${departments}">
+                                            <td class="fw-bold text-primary" th:text="${dept.code}">DEP-IT</td>
+                                            <td>
+                                                <div class="fw-semibold" th:text="${dept.name}">IT</div>
+                                                <div class="text-muted small" th:text="${dept.description}">Desc</div>
+                                            </td>
+                                            <td th:text="${dept.location != null ? dept.location : '-'}">Location</td>
+                                            <td>
+                                                <span class="badge bg-primary rounded-pill px-3" th:text="${dept.employeeCount} + ' Staff'">0 Staff</span>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <a th:href="@{/departments/edit/{id}(id=${dept.id})}" class="btn btn-sm btn-light border" title="Edit"><i class="bi bi-pencil"></i></a>
+                                                    <form sec:authorize="hasRole('ADMIN')" th:action="@{/departments/delete/{id}(id=${dept.id})}" method="post" onsubmit="return confirm('Deleting this department will unassign employees. Continue?');">
+                                                        <button type="submit" class="btn btn-sm btn-light border text-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr th:if="${#lists.isEmpty(departments)}">
+                                            <td colspan="5" class="text-center text-muted py-4">No departments found.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

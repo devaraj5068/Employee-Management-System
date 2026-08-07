@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' - Employee Management System'">EMS</title>
+    <!-- Bootstrap 5 CSS -->
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css}">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+
+    <!-- Sidebar Fragment -->
+    <div th:fragment="sidebar" id="sidebar-wrapper">
+        <div class="sidebar-heading">
+            <i class="bi bi-people-fill"></i>
+            <span>EMS Portal</span>
+        </div>
+        <div class="sidebar-nav">
+            <div class="nav-section">Main</div>
+            <a th:href="@{/dashboard}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+
+            <!-- Admin / HR / Manager Operations -->
+            <div sec:authorize="hasAnyRole('ADMIN', 'HR', 'MANAGER')">
+                <div class="nav-section">Management</div>
+                <a th:href="@{/employees}">
+                    <i class="bi bi-person-badge"></i> Employees
+                </a>
+                <a th:href="@{/departments}">
+                    <i class="bi bi-building"></i> Departments
+                </a>
+                <a th:href="@{/roles}" sec:authorize="hasRole('ADMIN')">
+                    <i class="bi bi-shield-lock"></i> Roles
+                </a>
+                <a th:href="@{/attendance/all}">
+                    <i class="bi bi-calendar-check"></i> Attendance List
+                </a>
+                <a th:href="@{/salary/all}">
+                    <i class="bi bi-cash-stack"></i> Payroll / Salaries
+                </a>
+                <a th:href="@{/leave/list}">
+                    <i class="bi bi-calendar2-range"></i> Leave Approvals
+                </a>
+                <a th:href="@{/reports}">
+                    <i class="bi bi-file-earmark-bar-graph"></i> Reports & Export
+                </a>
+            </div>
+
+            <!-- System Admin Tools -->
+            <div sec:authorize="hasRole('ADMIN')">
+                <div class="nav-section">System Admin</div>
+                <a th:href="@{/admin/users}">
+                    <i class="bi bi-person-gear"></i> System Accounts
+                </a>
+                <a th:href="@{/admin/logs}">
+                    <i class="bi bi-journal-text"></i> Audit Logs
+                </a>
+            </div>
+
+            <!-- Employee Self-Service -->
+            <div sec:authorize="hasRole('EMPLOYEE')">
+                <div class="nav-section">Self Service</div>
+                <a th:href="@{/attendance/my}">
+                    <i class="bi bi-clock-history"></i> My Attendance
+                </a>
+                <a th:href="@{/salary/my}">
+                    <i class="bi bi-receipt"></i> My Payslips
+                </a>
+                <a th:href="@{/leave/history}">
+                    <i class="bi bi-calendar2-check"></i> My Leave Applications
+                </a>
+            </div>
+
+            <div class="nav-section">Account</div>
+            <a th:href="@{/profile}">
+                <i class="bi bi-person-circle"></i> My Profile
+            </a>
+            <a th:href="@{/profile/change-password}">
+                <i class="bi bi-key"></i> Change Password
+            </a>
+        </div>
+    </div>
+
+    <!-- Top Navbar Fragment -->
+    <nav th:fragment="navbar" class="navbar navbar-expand-lg main-navbar">
+        <div class="container-fluid px-0">
+            <button class="btn-toggle-sidebar" id="sidebarToggle">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <!-- Dark Mode Toggle Button -->
+                <button class="btn border-0 p-1" id="themeToggleBtn" title="Toggle Dark/Light Theme">
+                    <i class="bi bi-moon-stars-fill text-secondary fs-5"></i>
+                </button>
+
+                <div class="dropdown">
+                    <a class="nav-link dropdown-toggle user-profile-badge" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle fs-5"></i>
+                        <span sec:authentication="name">User</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" th:href="@{/profile}"><i class="bi bi-person me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" th:href="@{/profile/change-password}"><i class="bi bi-key me-2"></i>Change Password</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form th:action="@{/logout}" method="post" class="px-2">
+                                <button type="submit" class="btn btn-sm btn-danger w-100"><i class="bi bi-box-arrow-right me-2"></i>Logout</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Global Toast / Alert Messages Fragment -->
+    <div th:fragment="alerts">
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> <span th:text="${successMessage}">Success!</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> <span th:text="${errorMessage}">Error!</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${warningMessage}" class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i> <span th:text="${warningMessage}">Warning!</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+
+    <!-- Scripts Fragment -->
+    <div th:fragment="scripts">
+        <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+        <script th:src="@{/js/main.js}"></script>
+    </div>
+
+</body>
+</html>

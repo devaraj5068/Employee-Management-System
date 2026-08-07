@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('System Users')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">System Accounts & Activation</h3>
+                        <p class="text-muted mb-0">View registered user accounts, roles, and toggle account activation status.</p>
+                    </div>
+                </div>
+
+                <div class="card custom-table-card">
+                    <div class="table-responsive">
+                        <table class="table custom-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Linked Employee</th>
+                                    <th>Roles</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="u : ${users}">
+                                    <td th:text="${u.id}">1</td>
+                                    <td class="fw-bold text-primary" th:text="${u.username}">admin</td>
+                                    <td th:text="${u.email}">admin@ems.com</td>
+                                    <td th:text="${u.employee != null ? u.employee.fullName : 'System Account'}">System Admin</td>
+                                    <td>
+                                        <span th:each="r : ${u.roles}" class="badge bg-secondary me-1" th:text="${r.name}">ROLE_ADMIN</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge" th:classappend="${u.enabled} ? 'badge-active' : 'badge-inactive'" th:text="${u.enabled ? 'ACTIVE' : 'DISABLED'}">ACTIVE</span>
+                                    </td>
+                                    <td>
+                                        <form th:action="@{/admin/users/toggle/{id}(id=${u.id})}" method="post">
+                                            <button type="submit" class="btn btn-sm" th:classappend="${u.enabled} ? 'btn-outline-danger' : 'btn-outline-success'"
+                                                    th:text="${u.enabled ? 'Deactivate' : 'Activate'}">Toggle</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

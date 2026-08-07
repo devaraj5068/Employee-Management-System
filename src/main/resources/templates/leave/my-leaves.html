@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('My Leave Applications')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">My Leave Applications</h3>
+                        <p class="text-muted mb-0">Track status of your submitted leave requests.</p>
+                    </div>
+                    <a th:href="@{/leave/apply}" class="btn btn-primary-custom">
+                        <i class="bi bi-plus-lg me-1"></i> Apply New Leave
+                    </a>
+                </div>
+
+                <div class="card custom-table-card">
+                    <div class="table-responsive">
+                        <table class="table custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Applied On</th>
+                                    <th>Leave Type</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Duration</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Approved By / Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="l : ${leaves}">
+                                    <td class="small font-monospace" th:text="${l.createdAtFormatted}">2026-08-05</td>
+                                    <td class="fw-bold text-primary" th:text="${l.leaveType}">CASUAL</td>
+                                    <td th:text="${l.startDate}">2026-08-10</td>
+                                    <td th:text="${l.endDate}">2026-08-12</td>
+                                    <td class="fw-semibold" th:text="${l.numberOfDays} + ' Days'">3 Days</td>
+                                    <td th:text="${l.reason}">Reason</td>
+                                    <td>
+                                        <span class="badge" 
+                                              th:classappend="${l.status.name() == 'APPROVED'} ? 'badge-active' : (${l.status.name() == 'REJECTED'} ? 'badge-inactive' : 'badge-on-leave')"
+                                              th:text="${l.status}">PENDING</span>
+                                    </td>
+                                    <td>
+                                        <div th:if="${l.approvedByName != null}" class="small">
+                                            <span class="fw-bold text-dark" th:text="${l.approvedByName}">Manager</span>
+                                            <div class="text-muted" th:text="${l.remarks}">Approved</div>
+                                        </div>
+                                        <span th:if="${l.approvedByName == null}" class="text-muted small">-</span>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(leaves)}">
+                                    <td colspan="8" class="text-center text-muted py-4">No leave applications found.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

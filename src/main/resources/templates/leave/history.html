@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Leave History')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <!-- Breadcrumb -->
+                <nav aria-label="breadcrumb" class="mb-3">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a th:href="@{/dashboard}"><i class="bi bi-house me-1"></i> Dashboard</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Leave History</li>
+                    </ol>
+                </nav>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1"><i class="bi bi-clock-history me-2 text-primary"></i> Leave History</h3>
+                        <p class="text-muted mb-0">Track your applied leaves, duration, and approval status.</p>
+                    </div>
+                    <a th:href="@{/leave/apply}" class="btn btn-primary-custom">
+                        <i class="bi bi-plus-lg me-1"></i> Apply New Leave
+                    </a>
+                </div>
+
+                <!-- Leave Balance Widget -->
+                <div class="row g-3 mb-4" th:if="${leaveBalance != null}">
+                    <div class="col-md-3 col-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon primary"><i class="bi bi-calendar-check"></i></div>
+                                <div>
+                                    <div class="text-muted small">Total Quota</div>
+                                    <div class="fs-4 fw-bold text-dark" th:text="${leaveBalance.totalLeave}">24</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon success"><i class="bi bi-check-circle"></i></div>
+                                <div>
+                                    <div class="text-muted small">Used Days</div>
+                                    <div class="fs-4 fw-bold text-success" th:text="${leaveBalance.usedLeave}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon warning"><i class="bi bi-hourglass-split"></i></div>
+                                <div>
+                                    <div class="text-muted small">Pending</div>
+                                    <div class="fs-4 fw-bold text-warning" th:text="${leaveBalance.pendingLeave}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon info"><i class="bi bi-pie-chart"></i></div>
+                                <div>
+                                    <div class="text-muted small">Remaining</div>
+                                    <div class="fs-4 fw-bold text-info" th:text="${leaveBalance.remainingLeave}">24</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card custom-table-card">
+                    <div class="table-responsive">
+                        <table class="table custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Leave ID</th>
+                                    <th>Applied Date</th>
+                                    <th>Leave Type</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Duration</th>
+                                    <th>Status</th>
+                                    <th>Actions / Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="l : ${leaves}">
+                                    <td class="fw-bold text-secondary" th:text="'#LV-' + ${l.id}">#LV-1</td>
+                                    <td class="small font-monospace text-muted" th:text="${l.createdAtFormatted}">2026-08-06</td>
+                                    <td class="fw-bold text-primary" th:text="${l.leaveType}">CASUAL</td>
+                                    <td th:text="${l.startDate}">2026-08-10</td>
+                                    <td th:text="${l.endDate}">2026-08-12</td>
+                                    <td class="fw-bold text-dark" th:text="${l.numberOfDays} + ' Days'">3 Days</td>
+                                    <td>
+                                        <span class="badge" 
+                                              th:classappend="${l.status.name() == 'APPROVED'} ? 'badge-active' : (${l.status.name() == 'REJECTED'} ? 'badge-inactive' : (${l.status.name() == 'CANCELLED'} ? 'bg-secondary text-white' : 'badge-on-leave'))"
+                                              th:text="${l.status}">PENDING</span>
+                                    </td>
+                                    <td>
+                                        <div th:if="${l.status.name() == 'PENDING'}">
+                                            <form th:action="@{/leave/cancel/{id}(id=${l.id})}" method="post" onsubmit="return confirm('Are you sure you want to cancel this leave application?');">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-x-circle me-1"></i> Cancel Request
+                                                </button>
+                                            </form>
+                                        </div>
+                                        <div th:if="${l.status.name() != 'PENDING'}" class="small">
+                                            <span class="text-muted" th:text="${l.remarks != null && !l.remarks.isEmpty() ? l.remarks : '-'}">-</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr th:if="${leaves == null || #lists.isEmpty(leaves)}">
+                                    <td colspan="8" class="text-center text-muted py-4">No leave history records found.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

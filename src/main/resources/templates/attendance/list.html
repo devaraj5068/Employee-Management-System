@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Attendance Directory')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Company Attendance Log</h3>
+                        <p class="text-muted mb-0">Track daily check-ins, check-outs, work hours, and absences.</p>
+                    </div>
+                    <a th:href="@{/attendance/mark}" class="btn btn-primary-custom">
+                        <i class="bi bi-calendar-plus me-1"></i> Mark Attendance
+                    </a>
+                </div>
+
+                <!-- Filter Form -->
+                <div class="card custom-table-card p-3 mb-4">
+                    <form th:action="@{/attendance/all}" method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted">Employee</label>
+                            <select class="form-select" name="employeeId">
+                                <option value="">All Employees</option>
+                                <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.fullName + ' (' + emp.employeeCode + ')'}" th:selected="${emp.id == employeeId}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted">Department</label>
+                            <select class="form-select" name="departmentId">
+                                <option value="">All Departments</option>
+                                <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}" th:selected="${dept.id == departmentId}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted">Date</label>
+                            <input type="date" class="form-control" name="date" th:value="${date}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="">All Statuses</option>
+                                <option th:each="st : ${statuses}" th:value="${st}" th:text="${st}" th:selected="${st == status}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary-custom w-100"><i class="bi bi-search"></i></button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Table -->
+                <div class="card custom-table-card">
+                    <div class="table-responsive">
+                        <table class="table custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Employee Code</th>
+                                    <th>Employee Name</th>
+                                    <th>Department</th>
+                                    <th>Check-In</th>
+                                    <th>Check-Out</th>
+                                    <th>Work Hours</th>
+                                    <th>Status</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="att : ${attendancePage.content}">
+                                    <td class="fw-bold text-dark" th:text="${att.attendanceDate}">2026-08-05</td>
+                                    <td class="fw-semibold text-primary" th:text="${att.employeeCode}">EMP001</td>
+                                    <td th:text="${att.employeeName}">John Doe</td>
+                                    <td th:text="${att.departmentName != null ? att.departmentName : '-'}">IT</td>
+                                    <td th:text="${att.checkInTime != null ? att.checkInTime : '-'}">09:00</td>
+                                    <td th:text="${att.checkOutTime != null ? att.checkOutTime : '-'}">17:30</td>
+                                    <td class="fw-semibold text-primary" th:text="${att.workHours != null ? att.workHours + ' hrs' : '0 hrs'}">8.5 hrs</td>
+                                    <td>
+                                        <span class="badge" 
+                                              th:classappend="${att.status.name() == 'PRESENT'} ? 'badge-active' : (${att.status.name() == 'ABSENT'} ? 'badge-inactive' : 'badge-on-leave')"
+                                              th:text="${att.status}">PRESENT</span>
+                                    </td>
+                                    <td th:text="${att.remarks != null ? att.remarks : '-'}">Remarks</td>
+                                </tr>
+                                <tr th:if="${attendancePage.totalElements == 0}">
+                                    <td colspan="9" class="text-center text-muted py-4">No attendance records found.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div th:if="${attendancePage.totalPages > 1}" class="card-footer bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                        <div class="text-muted small">
+                            Showing page <span th:text="${attendancePage.number + 1}">1</span> of <span th:text="${attendancePage.totalPages}">1</span>
+                        </div>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item" th:classappend="${attendancePage.first} ? 'disabled'">
+                                <a class="page-link" th:href="@{/attendance/all(page=${attendancePage.number - 1}, employeeId=${employeeId}, departmentId=${departmentId}, date=${date}, status=${status})}">Previous</a>
+                            </li>
+                            <li class="page-item" th:each="i : ${#numbers.sequence(0, attendancePage.totalPages - 1)}" th:classappend="${i == attendancePage.number} ? 'active'">
+                                <a class="page-link" th:href="@{/attendance/all(page=${i}, employeeId=${employeeId}, departmentId=${departmentId}, date=${date}, status=${status})}" th:text="${i + 1}">1</a>
+                            </li>
+                            <li class="page-item" th:classappend="${attendancePage.last} ? 'disabled'">
+                                <a class="page-link" th:href="@{/attendance/all(page=${attendancePage.number + 1}, employeeId=${employeeId}, departmentId=${departmentId}, date=${date}, status=${status})}">Next</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

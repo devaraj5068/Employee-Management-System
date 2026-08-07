@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Register Account')}"></head>
+<body class="auth-container py-5">
+    <div class="auth-card" style="max-width: 580px;">
+        <div class="auth-brand">
+            <i class="bi bi-person-plus-fill text-primary"></i>
+            <span>Employee Registration</span>
+        </div>
+
+        <div th:replace="~{fragments/layout :: alerts}"></div>
+
+        <form th:action="@{/register}" th:object="${userDto}" method="post">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="firstName" class="form-label font-weight-semibold">First Name *</label>
+                    <input type="text" class="form-control" th:field="*{firstName}" placeholder="John" required>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="lastName" class="form-label font-weight-semibold">Last Name *</label>
+                    <input type="text" class="form-control" th:field="*{lastName}" placeholder="Doe" required>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}"></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="username" class="form-label font-weight-semibold">Username *</label>
+                    <input type="text" class="form-control" th:field="*{username}" placeholder="johndoe" required>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="email" class="form-label font-weight-semibold">Email Address *</label>
+                    <input type="email" class="form-control" th:field="*{email}" placeholder="john.doe@company.com" required>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="mobileNumber" class="form-label font-weight-semibold">Mobile Number *</label>
+                    <input type="text" class="form-control" th:field="*{mobileNumber}" placeholder="+1-555-0199" required>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('mobileNumber')}" th:errors="*{mobileNumber}"></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="departmentId" class="form-label font-weight-semibold">Department</label>
+                    <select class="form-select" th:field="*{departmentId}">
+                        <option value="">-- Select Department --</option>
+                        <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}"></option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="password" class="form-label font-weight-semibold">Password *</label>
+                    <input type="password" class="form-control" th:field="*{password}" placeholder="At least 6 characters" required>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="confirmPassword" class="form-label font-weight-semibold">Confirm Password *</label>
+                    <input type="password" class="form-control" th:field="*{confirmPassword}" placeholder="Repeat password" required>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary-custom w-100 py-2 mt-4">
+                <i class="bi bi-check-circle me-2"></i> Register Account
+            </button>
+        </form>
+
+        <div class="mt-4 text-center">
+            <p class="text-muted small mb-0">Already registered? <a th:href="@{/login}" class="text-primary font-weight-bold text-decoration-none">Log In Here</a></p>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

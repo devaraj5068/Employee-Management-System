@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('My Payslips')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">My Salary Payslips</h3>
+                        <p class="text-muted mb-0">View monthly earnings, allowances, deductions, and download payslips.</p>
+                    </div>
+                </div>
+
+                <div class="card custom-table-card">
+                    <div class="table-responsive">
+                        <table class="table custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Pay Month</th>
+                                    <th>Basic Salary</th>
+                                    <th>Allowances (HRA/DA/Bonus)</th>
+                                    <th>Deductions & Tax</th>
+                                    <th>Net Salary</th>
+                                    <th>Payment Date</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="sal : ${salaries}">
+                                    <td class="fw-bold text-primary" th:text="${sal.payMonth}">2026-07</td>
+                                    <td th:text="'$' + ${sal.basicSalary}">$5000</td>
+                                    <td th:text="'$' + ${sal.hra + sal.da + sal.bonus + sal.incentives}">$1000</td>
+                                    <td class="text-danger" th:text="'$' + ${sal.deductions + sal.tax}">$500</td>
+                                    <td class="fw-bold text-success fs-6" th:text="'$' + ${sal.netSalary}">$5500</td>
+                                    <td th:text="${sal.paymentDate}">2026-07-31</td>
+                                    <td><span class="badge bg-success" th:text="${sal.paymentStatus}">PAID</span></td>
+                                    <td>
+                                        <a th:href="@{/salary/slip/{id}(id=${sal.id})}" class="btn btn-sm btn-primary-custom"><i class="bi bi-file-earmark-pdf me-1"></i> View Slip</a>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(salaries)}">
+                                    <td colspan="8" class="text-center text-muted py-4">No payslip history found.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

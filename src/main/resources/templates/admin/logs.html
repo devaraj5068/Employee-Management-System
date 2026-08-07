@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Audit Logs')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">System Audit Logs</h3>
+                        <p class="text-muted mb-0">Track authentication attempts and critical system actions.</p>
+                    </div>
+                </div>
+
+                <div class="card custom-table-card">
+                    <div class="table-responsive">
+                        <table class="table custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                    <th>IP Address</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="log : ${logPage.content}">
+                                    <td class="small font-monospace" th:text="${#temporals.format(log.timestamp, 'yyyy-MM-dd HH:mm:ss')}">2026-08-05 10:00:00</td>
+                                    <td class="fw-bold text-primary" th:text="${log.username}">username</td>
+                                    <td><span class="badge bg-dark" th:text="${log.action}">LOGIN</span></td>
+                                    <td th:text="${log.details}">Details</td>
+                                    <td class="small font-monospace text-muted" th:text="${log.ipAddress}">127.0.0.1</td>
+                                </tr>
+                                <tr th:if="${logPage.totalElements == 0}">
+                                    <td colspan="5" class="text-center text-muted py-4">No audit logs recorded yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

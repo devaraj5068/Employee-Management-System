@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Edit Department')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Edit Department</h3>
+                        <p class="text-muted mb-0">Modify department details.</p>
+                    </div>
+                    <a th:href="@{/departments}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to List</a>
+                </div>
+
+                <div class="card custom-table-card p-4" style="max-width: 600px;">
+                    <form th:action="@{/departments/edit/{id}(id=${departmentDto.id})}" th:object="${departmentDto}" method="post">
+                        <div class="mb-3">
+                            <label class="form-label font-weight-semibold">Department Code *</label>
+                            <input type="text" class="form-control" th:field="*{code}" required>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label font-weight-semibold">Department Name *</label>
+                            <input type="text" class="form-control" th:field="*{name}" required>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label font-weight-semibold">Location</label>
+                            <input type="text" class="form-control" th:field="*{location}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label font-weight-semibold">Description</label>
+                            <textarea class="form-control" th:field="*{description}" rows="3"></textarea>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                            <a th:href="@{/departments}" class="btn btn-light border px-4">Cancel</a>
+                            <button type="submit" class="btn btn-primary-custom px-4"><i class="bi bi-save me-1"></i> Update Department</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

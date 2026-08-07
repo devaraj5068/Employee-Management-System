@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Salary Slip Form')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1" th:text="${salaryDto.id != null ? 'Edit Salary Details' : 'Generate Salary Slip'}">Salary Form</h3>
+                        <p class="text-muted mb-0">Enter earnings breakdown, allowances, tax, and deductions.</p>
+                    </div>
+                    <a th:href="@{/salary/all}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to Payroll</a>
+                </div>
+
+                <div class="card custom-table-card p-4">
+                    <form th:action="${salaryDto.id != null ? '/salary/edit/' + salaryDto.id : '/salary/create'}" th:object="${salaryDto}" method="post">
+                        
+                        <h5 class="fw-bold text-primary mb-3 border-bottom pb-2">1. Employee & Period</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="employeeId" class="form-label font-weight-semibold">Select Employee *</label>
+                                <select class="form-select" th:field="*{employeeId}" required th:disabled="${salaryDto.id != null}">
+                                    <option value="">-- Select Employee --</option>
+                                    <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.fullName + ' (' + emp.employeeCode + ')'}"></option>
+                                </select>
+                                <input th:if="${salaryDto.id != null}" type="hidden" th:field="*{employeeId}">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label for="payMonth" class="form-label font-weight-semibold">Pay Month (YYYY-MM) *</label>
+                                <input type="text" class="form-control" th:field="*{payMonth}" placeholder="2026-08" required>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label for="paymentStatus" class="form-label font-weight-semibold">Payment Status</label>
+                                <select class="form-select" th:field="*{paymentStatus}">
+                                    <option th:each="ps : ${paymentStatuses}" th:value="${ps}" th:text="${ps}"></option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h5 class="fw-bold text-primary mb-3 border-bottom pb-2">2. Earnings & Allowances</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="basicSalary" class="form-label font-weight-semibold">Basic Salary ($) *</label>
+                                <input type="number" step="0.01" class="form-control" id="basicSalary" th:field="*{basicSalary}" placeholder="5000.00" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="hra" class="form-label font-weight-semibold">HRA (House Rent Allowance) ($)</label>
+                                <input type="number" step="0.01" class="form-control" id="hra" th:field="*{hra}" placeholder="1000.00">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="da" class="form-label font-weight-semibold">DA (Dearness Allowance) ($)</label>
+                                <input type="number" step="0.01" class="form-control" id="da" th:field="*{da}" placeholder="500.00">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="bonus" class="form-label font-weight-semibold">Performance Bonus ($)</label>
+                                <input type="number" step="0.01" class="form-control" id="bonus" th:field="*{bonus}" placeholder="0.00">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="incentives" class="form-label font-weight-semibold">Incentives ($)</label>
+                                <input type="number" step="0.01" class="form-control" id="incentives" th:field="*{incentives}" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <h5 class="fw-bold text-primary mb-3 border-bottom pb-2">3. Deductions & Taxes</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="deductions" class="form-label font-weight-semibold">Other Deductions ($)</label>
+                                <input type="number" step="0.01" class="form-control" id="deductions" th:field="*{deductions}" placeholder="0.00">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="tax" class="form-label font-weight-semibold">Income Tax / TDS ($)</label>
+                                <input type="number" step="0.01" class="form-control" id="tax" th:field="*{tax}" placeholder="500.00">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label font-weight-semibold text-success">Calculated Net Salary ($)</label>
+                                <input type="text" class="form-control fw-bold text-success fs-5" id="netSalaryDisplay" readonly value="0.00">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="remarks" class="form-label font-weight-semibold">Remarks</label>
+                            <input type="text" class="form-control" th:field="*{remarks}" placeholder="e.g. Regular monthly payroll">
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                            <a th:href="@{/salary/all}" class="btn btn-light border px-4">Cancel</a>
+                            <button type="submit" class="btn btn-primary-custom px-4"><i class="bi bi-save me-1"></i> Save Salary Slip</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

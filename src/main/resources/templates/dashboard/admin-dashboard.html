@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Admin Dashboard')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <!-- Page Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">HR & Admin Dashboard</h3>
+                        <p class="text-muted mb-0">Overview of organizational workforce, attendance metrics, and payroll status.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/employees/add}" class="btn btn-primary-custom">
+                            <i class="bi bi-person-plus me-1"></i> Add Employee
+                        </a>
+                        <a th:href="@{/reports}" class="btn btn-outline-secondary">
+                            <i class="bi bi-download me-1"></i> Export Reports
+                        </a>
+                    </div>
+                </div>
+
+                <!-- KPI Metric Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-xl-3 col-md-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="text-muted small fw-semibold text-uppercase">Total Employees</div>
+                                    <div class="fs-2 fw-bold text-dark mt-1" th:text="${stats.totalEmployees}">0</div>
+                                    <div class="small text-success mt-1"><i class="bi bi-check-circle me-1"></i><span th:text="${stats.activeEmployees}">0</span> Active</div>
+                                </div>
+                                <div class="stat-icon primary"><i class="bi bi-people"></i></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="text-muted small fw-semibold text-uppercase">Departments</div>
+                                    <div class="fs-2 fw-bold text-dark mt-1" th:text="${stats.totalDepartments}">0</div>
+                                    <div class="small text-muted mt-1"><span th:text="${stats.totalRoles}">0</span> Roles Defined</div>
+                                </div>
+                                <div class="stat-icon info"><i class="bi bi-building"></i></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="text-muted small fw-semibold text-uppercase">Today's Present</div>
+                                    <div class="fs-2 fw-bold text-dark mt-1" th:text="${stats.todayPresentCount}">0</div>
+                                    <div class="small text-danger mt-1"><span th:text="${stats.todayAbsentCount}">0</span> Absent | <span th:text="${stats.todayLeaveCount}">0</span> On Leave</div>
+                                </div>
+                                <div class="stat-icon success"><i class="bi bi-calendar-check"></i></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6">
+                        <div class="card stat-card p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="text-muted small fw-semibold text-uppercase">Monthly Payroll</div>
+                                    <div class="fs-2 fw-bold text-dark mt-1" th:text="'$' + ${#numbers.formatDecimal(stats.monthlySalaryExpense, 1, 'COMMA', 2, 'POINT')}">$0.00</div>
+                                    <div class="small text-muted mt-1">Current Month Expense</div>
+                                </div>
+                                <div class="stat-icon warning"><i class="bi bi-cash-stack"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-7">
+                        <div class="card custom-table-card p-4 h-100">
+                            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-bar-chart-fill text-primary me-2"></i>Department Workforce Distribution</h5>
+                            <div style="height: 280px; position: relative;">
+                                <canvas id="deptChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <div class="card custom-table-card p-4 h-100">
+                            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-pie-chart-fill text-info me-2"></i>Today's Attendance Status</h5>
+                            <div style="height: 280px; position: relative;" class="d-flex justify-content-center">
+                                <canvas id="attChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Employees Table -->
+                <div class="card custom-table-card">
+                    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-person-lines-fill text-primary me-2"></i>Recently Added Employees</h5>
+                        <a th:href="@{/employees}" class="btn btn-sm btn-outline-primary">View All Employees</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Employee Name</th>
+                                    <th>Email</th>
+                                    <th>Department</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="emp : ${stats.recentEmployees}">
+                                    <td class="fw-semibold text-primary" th:text="${emp.employeeCode}">EMP001</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <img th:src="${emp.profilePictureUrl}" class="user-avatar" alt="Avatar">
+                                            <span class="fw-semibold" th:text="${emp.fullName}">Name</span>
+                                        </div>
+                                    </td>
+                                    <td th:text="${emp.email}">email@ems.com</td>
+                                    <td th:text="${emp.departmentName != null ? emp.departmentName : 'Unassigned'}">Dept</td>
+                                    <td th:text="${emp.roleName != null ? emp.roleName : 'Unassigned'}">Role</td>
+                                    <td>
+                                        <span class="badge" 
+                                              th:classappend="${emp.employmentStatus.name() == 'ACTIVE'} ? 'badge-active' : 'badge-inactive'"
+                                              th:text="${emp.employmentStatus}">ACTIVE</span>
+                                    </td>
+                                    <td>
+                                        <a th:href="@{/employees/view/{id}(id=${emp.id})}" class="btn btn-sm btn-light border" title="View"><i class="bi bi-eye"></i></a>
+                                        <a th:href="@{/employees/edit/{id}(id=${emp.id})}" class="btn btn-sm btn-light border" title="Edit"><i class="bi bi-pencil"></i></a>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(stats.recentEmployees)}">
+                                    <td colspan="7" class="text-center text-muted py-4">No recent employees found.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+
+    <!-- Dynamic Chart.js Script -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const deptData = /*[[${stats.employeesByDepartment}]]*/ {};
+        const attData = /*[[${stats.attendanceStatusBreakdown}]]*/ {};
+
+        // Department Bar Chart
+        const deptCanvas = document.getElementById('deptChart');
+        if (deptCanvas) {
+            new Chart(deptCanvas, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(deptData),
+                    datasets: [{
+                        label: 'Number of Employees',
+                        data: Object.values(deptData),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+        }
+
+        // Attendance Pie Chart
+        const attCanvas = document.getElementById('attChart');
+        if (attCanvas) {
+            new Chart(attCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Absent', 'On Leave'],
+                    datasets: [{
+                        data: [attData.PRESENT || 0, attData.ABSENT || 0, attData.LEAVE || 0],
+                        backgroundColor: ['#10b981', '#ef4444', '#f59e0b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+        /*]]>*/
+    </script>
+</body>
+</html>

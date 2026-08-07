@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('View Employee Details')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Employee Profile Details</h3>
+                        <p class="text-muted mb-0">View full employee record.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/employees/edit/{id}(id=${employee.id})}" class="btn btn-primary-custom"><i class="bi bi-pencil me-1"></i> Edit Profile</a>
+                        <a th:href="@{/employees}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to List</a>
+                    </div>
+                </div>
+
+                <div class="card custom-table-card p-4">
+                    <div class="d-flex align-items-center gap-4 pb-4 border-bottom mb-4">
+                        <img th:src="${employee.profilePictureUrl}" class="rounded-circle border border-3 border-primary" style="width: 100px; height: 100px; object-fit: cover;" alt="Profile Picture">
+                        <div>
+                            <h4 class="fw-bold mb-1" th:text="${employee.fullName}">Employee Name</h4>
+                            <div class="text-muted mb-2"><span class="badge bg-primary text-white" th:text="${employee.employeeCode}">EMP001</span> | <span th:text="${employee.roleName}">Role</span></div>
+                            <span class="badge" th:classappend="${employee.employmentStatus.name() == 'ACTIVE'} ? 'badge-active' : 'badge-inactive'" th:text="${employee.employmentStatus}">ACTIVE</span>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-info-circle me-2"></i>Personal Details</h6>
+                            <table class="table table-borderless">
+                                <tr><th class="text-muted w-35">Email:</th><td class="fw-semibold" th:text="${employee.email}">email@ems.com</td></tr>
+                                <tr><th class="text-muted">Mobile:</th><td class="fw-semibold" th:text="${employee.mobileNumber}">+1-555-0100</td></tr>
+                                <tr><th class="text-muted">Gender:</th><td class="fw-semibold" th:text="${employee.gender}">Male</td></tr>
+                                <tr><th class="text-muted">Date of Birth:</th><td class="fw-semibold" th:text="${employee.dateOfBirth != null ? employee.dateOfBirth : 'N/A'}">1995-01-01</td></tr>
+                            </table>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-briefcase me-2"></i>Job Information</h6>
+                            <table class="table table-borderless">
+                                <tr><th class="text-muted w-35">Department:</th><td class="fw-semibold" th:text="${employee.departmentName}">IT</td></tr>
+                                <tr><th class="text-muted">Role Title:</th><td class="fw-semibold" th:text="${employee.roleName}">Software Engineer</td></tr>
+                                <tr><th class="text-muted">Joining Date:</th><td class="fw-semibold" th:text="${employee.joiningDate}">2022-01-01</td></tr>
+                                <tr><th class="text-muted">Status:</th><td class="fw-semibold" th:text="${employee.employmentStatus}">ACTIVE</td></tr>
+                            </table>
+                        </div>
+
+                        <div class="col-md-12 border-top pt-3">
+                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-geo-alt me-2"></i>Address Information</h6>
+                            <p class="mb-1" th:text="${employee.address != null ? employee.address : 'No address provided.'}">Address</p>
+                            <p class="text-muted" th:text="${(employee.city != null ? employee.city : '') + ', ' + (employee.state != null ? employee.state : '') + ' ' + (employee.country != null ? employee.country : '')}">City, State Country</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

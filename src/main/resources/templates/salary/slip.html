@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Payslip Detail')}"></head>
+<body>
+    <div id="wrapper">
+        <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+        <div id="page-content-wrapper">
+            <nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+            <div class="container-fluid p-4">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Salary Payslip</h3>
+                        <p class="text-muted mb-0">Official Salary Statement for period <span th:text="${salary.payMonth}">2026-07</span>.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button onclick="window.print()" class="btn btn-primary-custom"><i class="bi bi-printer me-1"></i> Print Payslip</button>
+                        <a th:href="@{/salary/all}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+                    </div>
+                </div>
+
+                <!-- Printable Payslip Box -->
+                <div class="slip-box mx-auto" style="max-width: 800px;">
+                    <div class="slip-header text-center">
+                        <h3 class="fw-bold text-primary mb-1">GLOBAL TECH SOLUTIONS INC.</h3>
+                        <p class="text-muted mb-1">100 Corporate Parkway, Suite 500, San Jose, CA</p>
+                        <h5 class="fw-bold text-dark mt-3">PAYSLIP FOR THE MONTH OF <span th:text="${#strings.toUpperCase(salary.payMonth)}">JULY 2026</span></h5>
+                    </div>
+
+                    <!-- Employee Details Summary -->
+                    <div class="row g-3 mb-4 pb-3 border-bottom">
+                        <div class="col-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><th class="text-muted w-40">Employee Code:</th><td class="fw-bold" th:text="${employee.employeeCode}">EMP001</td></tr>
+                                <tr><th class="text-muted">Employee Name:</th><td class="fw-bold" th:text="${employee.fullName}">Alex Johnson</td></tr>
+                                <tr><th class="text-muted">Department:</th><td th:text="${employee.departmentName}">IT</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><th class="text-muted w-40">Role Title:</th><td th:text="${employee.roleName}">Senior Developer</td></tr>
+                                <tr><th class="text-muted">Payment Date:</th><td th:text="${salary.paymentDate}">2026-07-31</td></tr>
+                                <tr><th class="text-muted">Payment Status:</th><td><span class="badge bg-success" th:text="${salary.paymentStatus}">PAID</span></td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Breakdown Table -->
+                    <div class="row g-4 mb-4">
+                        <!-- Earnings -->
+                        <div class="col-6">
+                            <h6 class="fw-bold text-success border-bottom pb-2">EARNINGS</h6>
+                            <table class="table table-sm">
+                                <tr><td>Basic Salary</td><td class="text-end fw-semibold" th:text="'$' + ${salary.basicSalary}">$5000.00</td></tr>
+                                <tr><td>House Rent Allowance (HRA)</td><td class="text-end fw-semibold" th:text="'$' + ${salary.hra}">$1000.00</td></tr>
+                                <tr><td>Dearness Allowance (DA)</td><td class="text-end fw-semibold" th:text="'$' + ${salary.da}">$500.00</td></tr>
+                                <tr><td>Bonus & Incentives</td><td class="text-end fw-semibold" th:text="'$' + ${salary.bonus + salary.incentives}">$200.00</td></tr>
+                                <tr class="table-light fw-bold"><td>GROSS EARNINGS</td><td class="text-end text-success" th:text="'$' + ${salary.basicSalary + salary.hra + salary.da + salary.bonus + salary.incentives}">$6700.00</td></tr>
+                            </table>
+                        </div>
+
+                        <!-- Deductions -->
+                        <div class="col-6">
+                            <h6 class="fw-bold text-danger border-bottom pb-2">DEDUCTIONS</h6>
+                            <table class="table table-sm">
+                                <tr><td>Income Tax / TDS</td><td class="text-end fw-semibold" th:text="'$' + ${salary.tax}">$500.00</td></tr>
+                                <tr><td>Other Deductions</td><td class="text-end fw-semibold" th:text="'$' + ${salary.deductions}">$100.00</td></tr>
+                                <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+                                <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+                                <tr class="table-light fw-bold"><td>TOTAL DEDUCTIONS</td><td class="text-end text-danger" th:text="'$' + ${salary.tax + salary.deductions}">$600.00</td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Net Salary Summary Box -->
+                    <div class="bg-light p-3 rounded-3 text-center border">
+                        <div class="text-muted text-uppercase small fw-bold">NET PAY AMOUNT</div>
+                        <div class="fs-2 fw-bold text-primary" th:text="'$' + ${#numbers.formatDecimal(salary.netSalary, 1, 'COMMA', 2, 'POINT')}">$6,100.00</div>
+                    </div>
+
+                    <div class="mt-5 pt-4 d-flex justify-content-between text-center text-muted small">
+                        <div>
+                            <div class="border-top pt-2" style="width: 180px;">Employer Signature</div>
+                        </div>
+                        <div>
+                            <div class="border-top pt-2" style="width: 180px;">Employee Signature</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
