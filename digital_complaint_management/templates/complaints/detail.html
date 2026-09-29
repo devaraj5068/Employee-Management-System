@@ -1,0 +1,643 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}[{{ complaint.complaint_id }}] {{ complaint.title }} | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  #complaint-map {
+    width: 100%;
+    height: 400px;
+    min-height: 350px;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+
+  <!-- Dynamic Breadcrumb Navigation -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2">
+      <li class="breadcrumb-item">
+        <a href="{% url 'dashboard:index' %}"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'complaints:list' %}"><i class="bi bi-card-checklist me-1"></i> Complaints</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        <span class="font-monospace fw-semibold">{{ complaint.complaint_id }}</span>
+      </li>
+    </ol>
+  </nav>
+
+  <!-- Header Banner -->
+  <div class="complaint-header-card mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <span class="complaint-id-badge">{{ complaint.complaint_id }}</span>
+          <span class="badge {{ complaint.status_badge_class }} fs-6">{{ complaint.get_status_display }}</span>
+          <span class="badge {{ complaint.priority_badge_class }} fs-6">{{ complaint.get_priority_display }} Priority</span>
+          {% if complaint.is_escalated %}
+            <span class="badge bg-danger text-white fs-6 pulse-badge">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i> Escalated Level {{ complaint.escalation_level }}
+            </span>
+          {% endif %}
+        </div>
+        <h2 class="fw-bold tracking-tight text-dark mb-1">{{ complaint.title }}</h2>
+        <div class="d-flex flex-wrap align-items-center gap-3 text-muted small mt-2">
+          <span><i class="bi bi-calendar3 me-1"></i> Filed on: <strong>{{ complaint.created_at|date:"M d, Y H:i" }}</strong></span>
+          <span>&bull;</span>
+          <span>
+            <i class="bi bi-alarm me-1"></i> SLA Target: 
+            <strong class="{% if complaint.is_overdue %}text-danger fw-bold{% endif %}">
+              {{ complaint.due_date|date:"M d, Y H:i"|default:"Standard SLA" }}
+            </strong>
+            {% if complaint.is_overdue %}
+              <span class="badge bg-danger ms-1">OVERDUE</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <!-- Quick Document Export Actions -->
+      <div class="d-flex gap-2">
+        <a href="{% url 'complaints:receipt' complaint.complaint_id %}" class="btn btn-outline-secondary btn-sm shadow-sm" title="View printable acknowledgment receipt">
+          <i class="bi bi-printer me-1"></i> Receipt
+        </a>
+        <a href="{% url 'complaints:receipt_pdf' complaint.complaint_id %}" class="btn btn-primary btn-sm shadow-sm" title="Download official PDF receipt">
+          <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 1: Incident Details (Left) | Action Center (Right) -->
+  <div class="row g-4 mb-4">
+    <!-- Incident Details Card -->
+    <div class="col-lg-7">
+      <div class="card h-100 p-4">
+        <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="bi bi-info-circle me-2 text-primary"></i> Incident Details
+        </h5>
+
+        <div class="mb-4">
+          <label class="detail-info-label">Description of Grievance</label>
+          <div class="p-3 bg-light rounded-3 text-secondary" style="white-space: pre-line; line-height: 1.6;">
+            {{ complaint.description }}
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <div class="detail-info-block">
+              <div class="detail-info-label">Civic Department</div>
+              <div class="detail-info-val text-primary">
+                <i class="bi bi-building me-1"></i> {{ complaint.department.name|default:"General Civic Services" }}
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="detail-info-block">
+              <div class="detail-info-label">Category & Subcategory</div>
+              <div class="detail-info-val">
+                <i class="bi bi-tags me-1 text-info"></i> {{ complaint.category.name }}
+                {% if complaint.subcategory %}
+                  <span class="text-muted fw-normal">&rarr;</span> {{ complaint.subcategory.name }}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="detail-info-block">
+              <div class="detail-info-label">Citizen Complainant</div>
+              <div class="detail-info-val">
+                <i class="bi bi-person me-1 text-secondary"></i> {{ complaint.user.get_full_name|default:complaint.user.username }}
+              </div>
+              <div class="text-muted small mt-1 font-monospace">{{ complaint.user.email }}</div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="detail-info-block">
+              <div class="detail-info-label">Assigned Field Officer</div>
+              <div class="detail-info-val">
+                {% if complaint.assigned_staff %}
+                  <i class="bi bi-person-badge me-1 text-primary"></i>
+                  <span class="text-primary">{{ complaint.assigned_staff.get_full_name|default:complaint.assigned_staff.username }}</span>
+                {% else %}
+                  <span class="text-warning fw-semibold"><i class="bi bi-hourglass-split me-1"></i> Awaiting Assignment</span>
+                {% endif %}
+              </div>
+              {% if complaint.assigned_staff %}
+                <div class="text-muted small mt-1">{{ complaint.assigned_staff.email }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Center Card -->
+    <div class="col-lg-5">
+      <div class="action-card h-100">
+        <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="bi bi-sliders me-2 text-primary"></i> Action Center
+        </h5>
+
+        <div class="d-grid gap-2">
+          <!-- Staff & Admin Operational Actions -->
+          {% if can_manage %}
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#statusModal">
+              <i class="bi bi-arrow-repeat"></i> Update Status
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#priorityModal">
+              <i class="bi bi-flag"></i> Adjust Priority
+            </button>
+            <a href="{% url 'resolutions:submit' complaint.complaint_id %}" class="btn btn-success">
+              <i class="bi bi-check2-circle"></i> Add Official Resolution Proof
+            </a>
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#escalateModal">
+              <i class="bi bi-exclamation-triangle"></i> Escalate Ticket to Supervisor
+            </button>
+          {% endif %}
+
+          <!-- Admin Exclusive Staff Assignment -->
+          {% if can_assign %}
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignModal">
+              <i class="bi bi-person-gear"></i> Assign / Reassign Staff
+            </button>
+          {% endif %}
+
+          <!-- Citizen Specific Actions -->
+          {% if user.role == 'CITIZEN' and complaint.user == user %}
+            <a href="{% url 'complaints:track' %}?complaint_id={{ complaint.complaint_id }}" class="btn btn-outline-primary">
+              <i class="bi bi-search"></i> Public Track View
+            </a>
+            <a href="#communicationSection" class="btn btn-outline-secondary">
+              <i class="bi bi-chat-dots"></i> Message Assigned Officer
+            </a>
+
+            <!-- Feedback Button (When Resolved & No Feedback yet) -->
+            {% if complaint.status in 'RESOLVED,CLOSED' and not feedback %}
+              <a href="{% url 'feedback:submit' complaint.complaint_id %}" class="btn btn-warning text-dark fw-bold">
+                <i class="bi bi-star-fill me-1"></i> Rate Resolution Quality
+              </a>
+            {% endif %}
+
+            <!-- Reopen Button (When Resolved & within allowable days) -->
+            {% if complaint.status in 'RESOLVED,CLOSED' %}
+              <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#reopenModal">
+                <i class="bi bi-arrow-counterclockwise"></i> Reopen Ticket (Incomplete Work)
+              </button>
+            {% endif %}
+          {% endif %}
+        </div>
+
+        <!-- Quick Summary Box -->
+        <div class="mt-4 p-3 bg-light rounded-3 small">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">Current Stage:</span>
+            <strong class="text-dark">{{ complaint.get_status_display }}</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">Target SLA Hours:</span>
+            <span>{{ complaint.get_priority_sla_hours }} Hours</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Escalation Tier:</span>
+            <span class="fw-semibold text-danger">Level {{ complaint.escalation_level }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Geographic Location Card with Leaflet Map -->
+  <div class="row g-4 mb-4">
+    <div class="col-12">
+      <div class="map-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="bi bi-geo-alt-fill me-2 text-danger"></i> Geographic Location & Incident Pin
+          </h5>
+          {% if complaint.latitude and complaint.longitude %}
+            <span class="badge bg-light text-secondary border font-monospace">
+              Lat: {{ complaint.latitude }}, Lng: {{ complaint.longitude }}
+            </span>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <div class="detail-info-label">Address / Landmark</div>
+          <div class="fw-semibold text-dark">
+            <i class="bi bi-geo-alt me-1 text-danger"></i>
+            {{ complaint.location_address|default:"Exact street address not specified" }}
+          </div>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        {% if complaint.latitude and complaint.longitude %}
+          <div id="complaint-map"></div>
+        {% else %}
+          <div class="alert alert-light border rounded-3 p-4 text-center text-muted">
+            <i class="bi bi-geo-slash fs-2 d-block mb-2 text-secondary"></i>
+            <strong>Location information is not available for this complaint.</strong>
+            <p class="small mb-0">GPS coordinates were not attached when this grievance was submitted.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3: Citizen Uploaded Evidence -->
+  {% if attachments %}
+    <div class="row g-4 mb-4">
+      <div class="col-12">
+        <div class="card p-4">
+          <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+            <i class="bi bi-paperclip me-2 text-primary"></i> Uploaded Evidence & Inspection Media
+          </h5>
+          <div class="row g-3">
+            {% for att in attachments %}
+              <div class="col-md-6 col-lg-4">
+                <div class="attachment-card">
+                  {% if att.is_image %}
+                    <a href="{{ att.file.url }}" target="_blank">
+                      <img src="{{ att.file.url }}" class="rounded" style="width: 54px; height: 54px; object-fit: cover;" alt="Evidence">
+                    </a>
+                  {% elif att.is_video %}
+                    <div class="attachment-icon bg-dark text-white">
+                      <i class="bi bi-play-circle"></i>
+                    </div>
+                  {% else %}
+                    <div class="attachment-icon bg-primary bg-opacity-10 text-primary">
+                      <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                  {% endif %}
+                  <div class="text-truncate flex-grow-1">
+                    <div class="small fw-bold text-truncate">{{ att.file_name|default:"Attachment" }}</div>
+                    <small class="text-muted d-block">{{ att.uploaded_at|date:"M d, H:i" }}</small>
+                    <a href="{{ att.file.url }}" class="small fw-semibold text-primary" target="_blank" download>
+                      <i class="bi bi-download me-1"></i> Download
+                    </a>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Row 4: Citizen-Officer Communication -->
+  <div class="row g-4 mb-4" id="communicationSection">
+    <div class="col-12">
+      <div class="communication-card">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="bi bi-chat-left-dots me-2 text-primary"></i> Citizen-Officer Communication
+          </h5>
+          <span class="badge bg-light text-muted border">
+            {{ discussion_messages|length }} Message{{ discussion_messages|length|pluralize }}
+          </span>
+        </div>
+
+        <!-- Chat Stream -->
+        <div class="chat-container mb-3">
+          {% for m in discussion_messages %}
+            <div class="chat-bubble {% if m.is_internal %}chat-bubble-internal{% elif m.sender.role == 'CITIZEN' %}chat-bubble-citizen{% else %}chat-bubble-officer{% endif %}">
+              <div class="chat-meta">
+                <div>
+                  <strong>{{ m.sender.get_full_name|default:m.sender.username }}</strong>
+                  <span class="badge {% if m.sender.role == 'CITIZEN' %}bg-secondary{% elif m.sender.role == 'ADMIN' %}bg-dark{% else %}bg-primary{% endif %} ms-1" style="font-size: 0.65rem;">
+                    {{ m.sender.get_role_display }}
+                  </span>
+                  {% if m.is_internal %}
+                    <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;">INTERNAL NOTE</span>
+                  {% endif %}
+                </div>
+                <span class="text-muted ms-2">{{ m.created_at|date:"M d, H:i" }}</span>
+              </div>
+              <p class="mb-1 text-break">{{ m.message }}</p>
+              {% if m.attachment %}
+                <a href="{{ m.attachment.url }}" class="small text-decoration-none d-inline-flex align-items-center gap-1 mt-1 fw-semibold" target="_blank" download>
+                  <i class="bi bi-paperclip"></i> View Attachment
+                </a>
+              {% endif %}
+            </div>
+          {% empty %}
+            <div class="text-center py-4 text-muted">
+              <i class="bi bi-chat-dots fs-3 d-block mb-1"></i>
+              No messages posted yet. Start the conversation below.
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Message Input Box -->
+        <form method="post" action="{% url 'communication:post_message' complaint.complaint_id %}" enctype="multipart/form-data" class="chat-input-box">
+          {% csrf_token %}
+          <div class="mb-2">
+            <textarea name="message" class="form-control border-0" rows="3" placeholder="Write a response or inquiry..." required style="resize: none;"></textarea>
+          </div>
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2 border-top">
+            <div class="d-flex align-items-center gap-3">
+              <label class="btn btn-outline-secondary btn-sm mb-0 cursor-pointer" title="Attach image or file">
+                <i class="bi bi-paperclip"></i> Attach File
+                <input type="file" name="attachment" class="d-none">
+              </label>
+              {% if user.role in 'STAFF,ADMIN' or user.is_superuser %}
+                <div class="form-check mb-0">
+                  <input class="form-check-input" type="checkbox" name="is_internal" id="internalNoteCheck">
+                  <label class="form-check-label small text-muted" for="internalNoteCheck">
+                    Internal Note (Hidden from citizen)
+                  </label>
+                </div>
+              {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold">
+              <i class="bi bi-send me-1"></i> Send
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 5: Resolution, Feedback & Status Transition Audit History -->
+  <div class="row g-4 mb-4">
+    <!-- Resolution & Feedback Column -->
+    <div class="col-lg-6">
+      <!-- Official Resolution Card if present -->
+      {% if resolution %}
+        <div class="resolution-card mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="fw-bold text-success mb-0">
+              <i class="bi bi-check-circle-fill me-2"></i> Official Resolution
+            </h5>
+            {% if resolution.is_verified_by_admin %}
+              <span class="badge bg-success">Admin Verified</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Pending QA Review</span>
+            {% endif %}
+          </div>
+          <p class="mb-2 text-dark">{{ resolution.description }}</p>
+          {% if resolution.remarks %}
+            <div class="small text-muted mb-2"><strong>Remarks / Recommendations:</strong> {{ resolution.remarks }}</div>
+          {% endif %}
+          {% if resolution.resolution_proof %}
+            <div class="my-3">
+              <a href="{{ resolution.resolution_proof.url }}" target="_blank">
+                <img src="{{ resolution.resolution_proof.url }}" class="img-fluid rounded border shadow-sm" style="max-height: 180px;" alt="Resolution Completion Proof">
+              </a>
+            </div>
+          {% endif %}
+          <div class="small text-muted pt-2 border-top">
+            Resolved by <strong>{% if resolution.resolved_by %}{{ resolution.resolved_by.get_full_name|default:resolution.resolved_by.username }}{% else %}Official{% endif %}</strong> on {{ resolution.resolved_at|date:"M d, Y H:i" }}
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Citizen Rating & Review Card if present -->
+      {% if feedback %}
+        <div class="feedback-card mb-4">
+          <h5 class="fw-bold text-warning mb-2">
+            <i class="bi bi-star-fill me-1"></i> Citizen Rating & Review
+          </h5>
+          <div class="fs-4 text-warning mb-2">{{ feedback.stars_display }}</div>
+          <div class="small text-muted mb-2">
+            <strong>Satisfaction:</strong> {{ feedback.get_satisfaction_level_display }} &bull;
+            <strong>Resolution Quality:</strong> {{ feedback.get_resolution_quality_display }}
+          </div>
+          {% if feedback.comments %}
+            <p class="fst-italic text-dark mb-0">"{{ feedback.comments }}"</p>
+          {% endif %}
+          <div class="small text-muted mt-2 pt-2 border-top">
+            Reviewed on {{ feedback.created_at|date:"M d, Y H:i" }}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Status Transition History Timeline -->
+    <div class="col-lg-6">
+      <div class="card p-4 h-100">
+        <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="bi bi-clock-history me-2 text-secondary"></i> Status Audit History
+        </h5>
+        <ul class="history-timeline">
+          {% for h in history_logs %}
+            <li class="timeline-item">
+              <div class="timeline-marker"></div>
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <div>
+                  <span class="badge bg-secondary me-1">{{ h.previous_status|default:"Start" }}</span>
+                  <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                  <span class="badge bg-primary">{{ h.new_status }}</span>
+                </div>
+                <span class="text-muted" style="font-size: 0.75rem;">{{ h.created_at|date:"M d, H:i" }}</span>
+              </div>
+              <div class="text-dark small fw-semibold">{{ h.remarks }}</div>
+              <div class="text-muted" style="font-size: 0.72rem;">
+                By: {% if h.changed_by %}{{ h.changed_by.get_full_name|default:h.changed_by.username }}{% else %}System Engine{% endif %}
+              </div>
+            </li>
+          {% empty %}
+            <li class="text-muted small">No status transitions recorded yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modals -->
+{% if can_manage %}
+  <!-- Modal 1: Status Update -->
+  <div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content rounded-4 border-0">
+        <form method="post" action="{% url 'complaints:status_update' complaint.complaint_id %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold">Update Complaint Status</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">New Status</label>
+              {{ status_form.status }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Status Remarks / Justification *</label>
+              {{ status_form.remarks }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm px-3">Update Status</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Priority Update -->
+  <div class="modal fade" id="priorityModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content rounded-4 border-0">
+        <form method="post" action="{% url 'complaints:priority_update' complaint.complaint_id %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold">Adjust Ticket Priority</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">New Priority</label>
+              {{ priority_form.priority }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Justification for Change</label>
+              {{ priority_form.remarks }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm px-3">Save Priority</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Manual Escalation -->
+  <div class="modal fade" id="escalateModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content rounded-4 border-0">
+        <form method="post" action="{% url 'escalation:manual_escalate' complaint.complaint_id %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Escalate Complaint</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted">Escalating will notify senior department supervisors and administrative heads.</p>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Reason for Escalation *</label>
+              <textarea name="reason" class="form-control" rows="3" placeholder="Explain the delay, urgency, or lack of progress..." required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-danger btn-sm px-3">Escalate Ticket</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if can_assign %}
+  <!-- Modal 4: Staff Assignment -->
+  <div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content rounded-4 border-0">
+        <form method="post" action="{% url 'complaints:assign' complaint.complaint_id %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold">Assign / Reassign Complaint</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Civic Department</label>
+              {{ assign_form.department }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Designated Field Officer</label>
+              {{ assign_form.assigned_staff }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm px-3">Confirm Assignment</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if user.role == 'CITIZEN' and complaint.user == user and complaint.status in 'RESOLVED,CLOSED' %}
+  <!-- Modal 5: Citizen Reopening -->
+  <div class="modal fade" id="reopenModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content rounded-4 border-0">
+        <form method="post" action="{% url 'resolutions:reopen' complaint.complaint_id %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold text-danger"><i class="bi bi-arrow-counterclockwise me-1"></i> Reopen Complaint</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted">If the issue has recurred or the resolution was unsatisfactory, specify the reason below.</p>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Reason for Reopening *</label>
+              <textarea name="reopen_reason" class="form-control" rows="3" placeholder="Describe why this issue needs further work..." required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-danger btn-sm px-3">Confirm Reopen</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+{% if complaint.latitude and complaint.longitude %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const latitude = {{ complaint.latitude }};
+  const longitude = {{ complaint.longitude }};
+
+  if (latitude && longitude && document.getElementById("complaint-map")) {
+    const map = L.map("complaint-map").setView([latitude, longitude], 15);
+
+    const tileUrl = "{{ MAP_TILE_URL|escapejs }}";
+    const tileAttr = "{{ MAP_TILE_ATTRIBUTION|escapejs }}";
+
+    L.tileLayer(tileUrl, {
+      maxZoom: 19,
+      attribution: tileAttr
+    }).addTo(map);
+
+    const popupContent = `
+      <div style="font-family: inherit; font-size: 13px; line-height: 1.45; min-width: 180px;">
+        <div style="font-weight: 700; color: #2563eb; margin-bottom: 2px;">{{ complaint.complaint_id }}</div>
+        <div style="font-weight: 600; margin-bottom: 6px; color: #0f172a;">{{ complaint.title|escapejs }}</div>
+        <div style="margin-bottom: 2px;"><strong>Category:</strong> {{ complaint.category.name|escapejs }}</div>
+        <div style="margin-bottom: 2px;"><strong>Priority:</strong> {{ complaint.get_priority_display|escapejs }}</div>
+        <div style="margin-bottom: 2px;"><strong>Status:</strong> {{ complaint.get_status_display|escapejs }}</div>
+        <div><strong>Location:</strong> {{ complaint.location_address|default:"Incident Location"|escapejs }}</div>
+      </div>
+    `;
+
+    L.marker([latitude, longitude])
+      .addTo(map)
+      .bindPopup(popupContent)
+      .openPopup();
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

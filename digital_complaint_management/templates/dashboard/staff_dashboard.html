@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Field Officer Dashboard | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+
+  <!-- Staff Profile & Workload Header -->
+  <div class="card border-0 shadow-sm rounded-4 p-4 text-white mb-4" style="background: linear-gradient(135deg, #1f2937 0%, #111827 100%);">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <span class="badge bg-warning text-dark px-3 py-1 text-uppercase fw-bold mb-2">
+          <i class="bi bi-shield-shaded me-1"></i> Field Officer Portal
+        </span>
+        <h3 class="fw-bold mb-1">{{ user.get_full_name|default:user.username }}</h3>
+        <p class="mb-0 text-white text-opacity-75 small">
+          {{ profile.designation|default:"Field Officer" }} &bull; Department: <strong>{{ profile.department.name|default:"General Civic" }}</strong> &bull; Employee ID: <code>{{ profile.employee_id|default:"-" }}</code>
+        </p>
+      </div>
+      <div class="col-md-4 mt-3 mt-md-0">
+        <div class="bg-white bg-opacity-10 p-3 rounded-3 text-white">
+          <div class="d-flex justify-content-between small mb-1">
+            <span>Capacity Utilized</span>
+            <strong>{{ workload_pct }}%</strong>
+          </div>
+          <div class="progress" style="height: 8px;">
+            <div class="progress-bar {% if workload_pct > 80 %}bg-danger{% elif workload_pct > 50 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ workload_pct }}%;"></div>
+          </div>
+          <div class="d-flex justify-content-between small text-white text-opacity-75 mt-1" style="font-size: 0.72rem;">
+            <span>{{ profile.current_active_complaints_count|default:0 }} Active Tickets</span>
+            <span>Max Limit: {{ profile.max_active_capacity|default:15 }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="text-muted small fw-semibold">Total Assigned</div>
+        <div class="fs-3 fw-bold text-dark">{{ total_assigned }}</div>
+        <small class="text-muted">Lifetime</small>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="text-muted small fw-semibold">Pending Action</div>
+        <div class="fs-3 fw-bold text-secondary">{{ pending_assigned }}</div>
+        <small class="text-secondary">Needs Review</small>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="text-muted small fw-semibold">In Progress</div>
+        <div class="fs-3 fw-bold text-primary">{{ in_progress }}</div>
+        <small class="text-primary">Under Repair</small>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="text-muted small fw-semibold">Resolved</div>
+        <div class="fs-3 fw-bold text-success">{{ resolved_count }}</div>
+        <small class="text-success">Work Finished</small>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="text-muted small fw-semibold">Critical Tickets</div>
+        <div class="fs-3 fw-bold text-danger">{{ critical_count }}</div>
+        <small class="text-danger">High Hazard</small>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="text-muted small fw-semibold">Overdue / SLA</div>
+        <div class="fs-3 fw-bold text-danger">{{ overdue_count }}</div>
+        <small class="text-danger">Breached SLA</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Assigned Complaints Table -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="fw-bold text-dark mb-0">
+        <i class="bi bi-tools me-2 text-warning"></i> Active Tasks Queue
+      </h5>
+      <a href="{% url 'complaints:list' %}" class="btn btn-outline-secondary btn-sm">Browse All Assigned</a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light small">
+          <tr>
+            <th>ID</th>
+            <th>Complaint Title</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Complainant</th>
+            <th>SLA Deadline</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in recent_assigned %}
+            <tr class="{% if c.is_escalated or c.is_overdue %}table-danger-subtle{% endif %}">
+              <td>
+                <a href="{% url 'complaints:detail' c.complaint_id %}" class="fw-bold text-decoration-none">
+                  {{ c.complaint_id }}
+                </a>
+              </td>
+              <td>
+                <div class="fw-semibold text-truncate" style="max-width: 280px;">{{ c.title }}</div>
+                <small class="text-muted">{{ c.location_address|default:"Location pin recorded" }}</small>
+              </td>
+              <td><small class="badge bg-light text-dark border">{{ c.category.name }}</small></td>
+              <td><span class="badge {{ c.priority_badge_class }}">{{ c.get_priority_display }}</span></td>
+              <td><span class="badge {{ c.status_badge_class }}">{{ c.get_status_display }}</span></td>
+              <td class="small">{{ c.user.get_full_name|default:c.user.username }}</td>
+              <td class="small {% if c.is_overdue %}text-danger fw-bold{% endif %}">
+                {{ c.due_date|date:"M d, H:i"|default:"-" }}
+              </td>
+              <td class="text-end">
+                <a href="{% url 'resolutions:submit' c.complaint_id %}" class="btn btn-success btn-sm me-1" title="Submit Resolution">
+                  <i class="bi bi-check2"></i> Resolve
+                </a>
+                <a href="{% url 'complaints:detail' c.complaint_id %}" class="btn btn-outline-primary btn-sm">
+                  View <i class="bi bi-chevron-right"></i>
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8" class="text-center py-5 text-muted">
+                <div class="fs-2 mb-2 text-success"><i class="bi bi-check-all"></i></div>
+                <h5>All clear! No active tickets pending in your queue.</h5>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

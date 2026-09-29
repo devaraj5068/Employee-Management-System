@@ -1,0 +1,165 @@
+/* ResolveNow Civic Platform Core Stylesheet */
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --secondary: #64748b;
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+  --dark: #1f2937;
+  --light: #f8fafc;
+  --body-bg: #f1f5f9;
+  --card-bg: #ffffff;
+  --border-color: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--body-bg);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+/* Typography & Links */
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+/* Navbar */
+.navbar {
+  background-color: #0f172a !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.navbar-brand {
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.brand-icon {
+  background: linear-gradient(135deg, var(--primary), #38bdf8);
+  color: white;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+/* Base Card Styles */
+.card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-header {
+  background-color: transparent;
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 1.25rem;
+}
+
+.card-footer {
+  background-color: transparent;
+  border-top: 1px solid var(--border-color);
+  padding: 1rem 1.25rem;
+}
+
+/* Breadcrumb Styling */
+.breadcrumb {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.breadcrumb-item a {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.breadcrumb-item a:hover {
+  color: var(--primary);
+}
+
+.breadcrumb-item.active {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.btn-rounded {
+  border-radius: 9999px;
+}
+
+/* Badges */
+.badge {
+  font-weight: 600;
+  padding: 0.4em 0.75em;
+  border-radius: 6px;
+}
+
+.badge-submitted { background-color: #64748b; color: #fff; }
+.badge-under-review { background-color: #0ea5e9; color: #fff; }
+.badge-assigned { background-color: #3b82f6; color: #fff; }
+.badge-in-progress { background-color: #f59e0b; color: #fff; }
+.badge-on-hold { background-color: #eab308; color: #fff; }
+.badge-resolved { background-color: #10b981; color: #fff; }
+.badge-closed { background-color: #475569; color: #fff; }
+.badge-rejected { background-color: #ef4444; color: #fff; }
+.badge-reopened { background-color: #dc2626; color: #fff; }
+
+.priority-critical { background-color: #dc2626; color: #fff; }
+.priority-high { background-color: #ea580c; color: #fff; }
+.priority-medium { background-color: #0284c7; color: #fff; }
+.priority-low { background-color: #16a34a; color: #fff; }
+
+/* Subtle pulse badge */
+.pulse-badge {
+  animation: subtle-pulse 2s infinite ease-in-out;
+}
+
+@keyframes subtle-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+/* Footer */
+footer {
+  background-color: #0f172a;
+  border-top: 1px solid #1e293b;
+}

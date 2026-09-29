@@ -18,3 +18,16 @@ Thumbs.db
 *.class
 *.jar
 *.jar.original
+
+# Python & Django
+.env
+.env.local
+*.pyc
+__pycache__/
+venv/
+.venv/
+env/
+db.sqlite3
+media/
+staticfiles/
+*.log

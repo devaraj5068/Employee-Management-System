@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}SLA Escalation Management | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h3 class="fw-bold tracking-tight text-danger mb-1">
+        <i class="bi bi-shield-exclamation me-2"></i> SLA Escalation Command Center
+      </h3>
+      <p class="text-muted small mb-0">Track overdue complaints, multi-level hierarchy escalations, and automated SLA rules.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'escalation:scan' %}" class="btn btn-danger btn-sm shadow-sm">
+        <i class="bi bi-arrow-repeat me-1"></i> Trigger SLA Scanner Now
+      </a>
+    </div>
+  </div>
+
+  <!-- Escalation Hierarchy Rules Overview -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-top border-4 border-primary">
+        <h6 class="fw-bold mb-1">Level 1: Field Staff</h6>
+        <p class="text-muted small mb-0">Initial ticket assignment and regular SLA window.</p>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-top border-4 border-warning">
+        <h6 class="fw-bold mb-1">Level 2: Department Head</h6>
+        <p class="text-muted small mb-0">Triggered upon initial SLA breach or re-opening.</p>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-top border-4 border-danger">
+        <h6 class="fw-bold mb-1">Level 3: Administrator</h6>
+        <p class="text-muted small mb-0">Secondary SLA breach requiring high-level intervention.</p>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-top border-4 border-dark">
+        <h6 class="fw-bold mb-1">Level 4: Municipal Authority</h6>
+        <p class="text-muted small mb-0">Executive civic commissioner review for severe breaches.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Currently Escalated Complaints -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-exclamation-octagon-fill me-2 text-danger"></i> Currently Escalated Tickets</h5>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Department</th>
+            <th>Priority</th>
+            <th>Escalation Level</th>
+            <th>Officer Assigned</th>
+            <th>SLA Due Date</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in escalated_complaints %}
+            <tr class="table-danger-subtle">
+              <td><a href="{% url 'complaints:detail' c.complaint_id %}" class="fw-bold text-danger">{{ c.complaint_id }}</a></td>
+              <td class="text-truncate" style="max-width: 250px;">{{ c.title }}</td>
+              <td>{{ c.department.code|default:"GEN" }}</td>
+              <td><span class="badge {{ c.priority_badge_class }}">{{ c.get_priority_display }}</span></td>
+              <td>
+                {% if c.assigned_staff %}
+                  {{ c.assigned_staff.get_full_name|default:c.assigned_staff.username }}
+                {% else %}
+                  <span class="text-muted">Unassigned</span>
+                {% endif %}
+              </td>
+              <td class="fw-bold text-danger">{{ c.due_date|date:"Y-m-d H:i" }}</td>
+              <td class="text-end">
+                <a href="{% url 'complaints:detail' c.complaint_id %}" class="btn btn-sm btn-danger">Take Action</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8" class="text-center py-4 text-muted">No active escalated complaints. All tickets within SLA.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Escalation Logs History -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history me-2 text-secondary"></i> Escalation Event Logs</h5>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light">
+          <tr>
+            <th>Timestamp</th>
+            <th>Ticket</th>
+            <th>Level</th>
+            <th>Trigger Type</th>
+            <th>Reason</th>
+            <th>Triggered By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in logs %}
+            <tr>
+              <td>{{ l.triggered_at|date:"Y-m-d H:i" }}</td>
+              <td><a href="{% url 'complaints:detail' l.complaint.complaint_id %}" class="fw-bold">{{ l.complaint.complaint_id }}</a></td>
+              <td><span class="badge bg-danger">Level {{ l.level }}</span></td>
+              <td>
+                {% if l.is_automated %}
+                  <span class="badge bg-primary">Automated SLA Scanner</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Manual User Escalation</span>
+                {% endif %}
+              </td>
+              <td>{{ l.reason }}</td>
+              <td>{% if l.triggered_by %}{{ l.triggered_by.username }}{% else %}System Daemon{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="text-center py-3 text-muted">No escalation events recorded.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

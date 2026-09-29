@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Subcategory | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <h4 class="fw-bold mb-3 text-primary">Add Subcategory to {{ category.name }}</h4>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Subcategory Title *</label>
+            {{ form.name }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Description</label>
+            {{ form.description }}
+          </div>
+          <div class="form-check mb-4">
+            {{ form.is_active }}
+            <label class="form-check-label small fw-semibold" for="id_is_active">Subcategory is active</label>
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+            <a href="{% url 'complaints:category_list' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">Add Subcategory</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

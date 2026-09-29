@@ -1,0 +1,16 @@
+Hello {{ user_name }},
+
+A login verification request was made for your ResolveNow account.
+
+Your login verification code is:
+
+{{ otp }}
+
+This code is valid for 10 minutes.
+
+If you did not attempt to log in, please secure your account immediately.
+
+Regards,
+
+ResolveNow Team
+Online Complaint Resolution Platform

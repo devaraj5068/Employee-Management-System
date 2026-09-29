@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Civic Departments | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="fw-bold tracking-tight text-primary mb-1">
+        <i class="bi bi-building me-2"></i> Civic Departments
+      </h3>
+      <p class="text-muted small mb-0">Manage municipal departments, departmental heads, and jurisdiction scopes.</p>
+    </div>
+    <a href="{% url 'departments:create' %}" class="btn btn-primary shadow-sm">
+      <i class="bi bi-plus-circle me-1"></i> Add Department
+    </a>
+  </div>
+
+  <div class="row g-4">
+    {% for dept in departments %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 shadow-sm rounded-4 p-4 bg-white">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <span class="badge bg-light text-primary border mb-1">{{ dept.code }}</span>
+              <h5 class="fw-bold mb-1">{{ dept.name }}</h5>
+            </div>
+            <a href="{% url 'departments:update' dept.id %}" class="btn btn-sm btn-outline-secondary" title="Edit Department">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </div>
+
+          <p class="text-muted small mb-3">{{ dept.description|default:"No description provided." }}</p>
+
+          <div class="bg-light p-3 rounded-3 mb-3 small">
+            <div class="mb-1"><span class="text-muted">Head of Dept:</span> <strong>{% if dept.head_of_department %}{{ dept.head_of_department.get_full_name|default:dept.head_of_department.username }}{% else %}Unassigned{% endif %}</strong></div>
+            <div class="mb-1"><span class="text-muted">Email:</span> <code>{{ dept.contact_email|default:"-" }}</code></div>
+            <div><span class="text-muted">Contact:</span> {{ dept.contact_phone|default:"-" }}</div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center text-muted small mt-auto pt-2 border-top">
+            <span>Staff Count: <strong class="text-dark">{{ dept.total_staff_count }}</strong></span>
+            <span>Active Tickets: <strong class="text-primary">{{ dept.active_complaints_count }}</strong></span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

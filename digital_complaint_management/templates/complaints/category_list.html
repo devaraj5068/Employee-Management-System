@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Complaint Categories | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="fw-bold tracking-tight text-primary mb-1">
+        <i class="bi bi-tags me-2"></i> Categories & Subcategories
+      </h3>
+      <p class="text-muted small mb-0">Configure complaint classifications, mapped departments, and subcategories.</p>
+    </div>
+    <a href="{% url 'complaints:category_create' %}" class="btn btn-primary shadow-sm">
+      <i class="bi bi-plus-circle me-1"></i> Add New Category
+    </a>
+  </div>
+
+  <div class="row g-4">
+    {% for cat in categories %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 shadow-sm rounded-4 p-3 bg-white">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-primary bg-opacity-10 text-primary p-2 fs-5 rounded-3">
+                <i class="bi {{ cat.icon }}"></i>
+              </span>
+              <div>
+                <h5 class="fw-bold mb-0">{{ cat.name }}</h5>
+                <small class="text-muted">{{ cat.department.name }}</small>
+              </div>
+            </div>
+            <a href="{% url 'complaints:category_update' cat.id %}" class="btn btn-sm btn-outline-secondary" title="Edit Category">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </div>
+
+          <p class="text-muted small mb-3">{{ cat.description|default:"No description provided." }}</p>
+
+          <div class="bg-light p-2 rounded-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.75rem;">Subcategories:</span>
+              <a href="{% url 'complaints:subcategory_create' cat.id %}" class="small text-decoration-none">+ Add</a>
+            </div>
+            <ul class="list-unstyled mb-0 small">
+              {% for sub in cat.subcategories.all %}
+                <li class="py-1 border-bottom d-flex justify-content-between">
+                  <span>{{ sub.name }}</span>
+                  <span class="badge {% if sub.is_active %}bg-success{% else %}bg-secondary{% endif %}" style="font-size: 0.65rem;">
+                    {% if sub.is_active %}Active{% else %}Inactive{% endif %}
+                  </span>
+                </li>
+              {% empty %}
+                <li class="text-muted fst-italic py-1">No subcategories defined yet.</li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center text-muted small mt-auto pt-2 border-top">
+            <span>Default: <strong class="text-dark">{{ cat.get_default_priority_display }}</strong></span>
+            <span>Total Tickets: <strong class="text-primary">{{ cat.complaints.count }}</strong></span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

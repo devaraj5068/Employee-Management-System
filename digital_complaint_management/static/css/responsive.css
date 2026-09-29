@@ -1,0 +1,76 @@
+/* ResolveNow Responsive Stylesheet */
+
+@media (max-width: 991.98px) {
+  /* Tablet & Mobile Adjustments */
+  #complaint-map {
+    height: 350px;
+  }
+
+  .chat-bubble {
+    max-width: 95%;
+  }
+
+  .kpi-val {
+    font-size: 1.5rem;
+  }
+
+  .detail-info-block {
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* Mobile Specific Adjustments */
+  .container-fluid {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .complaint-header-card {
+    padding: 1rem;
+  }
+
+  .action-card {
+    padding: 1rem;
+  }
+
+  .communication-card {
+    padding: 1rem;
+  }
+
+  #complaint-map {
+    height: 300px;
+    min-height: 280px;
+  }
+
+  .table-responsive {
+    border: 0;
+  }
+
+  .breadcrumb {
+    font-size: 0.8rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .stat-card {
+    padding: 0.85rem !important;
+  }
+
+  .stat-icon-wrapper {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+}

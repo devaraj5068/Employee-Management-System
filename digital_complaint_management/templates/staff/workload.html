@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Field Staff Workload Analysis | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="fw-bold tracking-tight text-primary mb-1">
+        <i class="bi bi-pie-chart-fill me-2"></i> Field Staff Workload & Capacity
+      </h3>
+      <p class="text-muted small mb-0">Live workload monitoring, active assignments, and capacity limits per officer.</p>
+    </div>
+    <a href="{% url 'staff:list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Staff Directory
+    </a>
+  </div>
+
+  <div class="row g-4">
+    {% for item in workload_data %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 shadow-sm rounded-4 p-4 bg-white">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h5 class="fw-bold mb-0">{{ item.profile.user.get_full_name|default:item.profile.user.username }}</h5>
+              <small class="text-muted">{{ item.profile.designation }}</small>
+            </div>
+            <span class="badge bg-light text-dark border">{{ item.profile.department.code|default:"GEN" }}</span>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small fw-bold mb-1">
+              <span>Workload Capacity</span>
+              <span>{{ item.pct }}% ({{ item.active_count }}/{{ item.profile.max_active_capacity }})</span>
+            </div>
+            <div class="progress" style="height: 10px;">
+              <div class="progress-bar {% if item.pct > 80 %}bg-danger{% elif item.pct > 50 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ item.pct }}%;"></div>
+            </div>
+          </div>
+
+          <div class="row g-2 text-center small mb-3">
+            <div class="col-4">
+              <div class="p-2 bg-light rounded-3">
+                <div class="fw-bold text-primary fs-5">{{ item.active_count }}</div>
+                <div class="text-muted" style="font-size: 0.72rem;">Active</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="p-2 bg-light rounded-3">
+                <div class="fw-bold text-success fs-5">{{ item.resolved_count }}</div>
+                <div class="text-muted" style="font-size: 0.72rem;">Resolved</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="p-2 bg-light rounded-3">
+                <div class="fw-bold text-danger fs-5">{{ item.overdue_count }}</div>
+                <div class="text-muted" style="font-size: 0.72rem;">Overdue</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center small text-muted pt-2 border-top mt-auto">
+            <span>Availability: 
+              {% if item.profile.is_available %}
+                <strong class="text-success">Ready</strong>
+              {% else %}
+                <strong class="text-secondary">Unavailable</strong>
+              {% endif %}
+            </span>
+            <a href="{% url 'complaints:list' %}?department={{ item.profile.department.id }}" class="text-decoration-none">View Tickets &rarr;</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}User Profile | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4">
+    <!-- Left Column: User Summary Card -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 text-center p-4 bg-white">
+        <div class="position-relative d-inline-block mx-auto mb-3">
+          {% if user_obj.profile_picture %}
+            <img src="{{ user_obj.profile_picture.url }}" class="rounded-circle shadow" style="width: 110px; height: 110px; object-fit: cover;" alt="Avatar">
+          {% else %}
+            <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center mx-auto shadow-sm" style="width: 110px; height: 110px; font-size: 2.8rem;">
+              <i class="bi bi-person-fill"></i>
+            </div>
+          {% endif %}
+        </div>
+
+        <h4 class="fw-bold mb-1">{{ user_obj.get_full_name|default:user_obj.username }}</h4>
+        <p class="text-muted small mb-2">@{{ user_obj.username }}</p>
+        
+        <div>
+          <span class="badge {% if user_obj.role == 'ADMIN' %}bg-danger{% elif user_obj.role == 'STAFF' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %} px-3 py-2 text-uppercase mb-3">
+            {{ user_obj.get_role_display }}
+          </span>
+        </div>
+
+        <div class="d-grid gap-2 mt-3">
+          <a href="{% url 'accounts:profile_edit' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil-square me-1"></i> Edit Profile
+          </a>
+          <a href="{% url 'accounts:change_password' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-key me-1"></i> Change Password
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Profile Details & Activity -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+        <h5 class="fw-bold text-primary mb-3"><i class="bi bi-info-circle me-2"></i> Account Details</h5>
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label class="text-muted small mb-1">Email Address</label>
+            <div class="fw-semibold">{{ user_obj.email|default:"Not provided" }}</div>
+          </div>
+          <div class="col-sm-6">
+            <label class="text-muted small mb-1">Phone Number</label>
+            <div class="fw-semibold">{{ user_obj.phone_number|default:"Not provided" }}</div>
+          </div>
+          <div class="col-sm-6">
+            <label class="text-muted small mb-1">Account Status</label>
+            <div>
+              <span class="badge bg-success">{{ user_obj.account_status }}</span>
+              {% if user_obj.is_verified %}
+                <span class="badge bg-info text-dark ms-1"><i class="bi bi-check-circle"></i> Verified</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <label class="text-muted small mb-1">Member Since</label>
+            <div class="fw-semibold">{{ user_obj.date_joined|date:"F d, Y" }}</div>
+          </div>
+          <div class="col-12">
+            <label class="text-muted small mb-1">Registered Address</label>
+            <div class="fw-semibold">{{ user_obj.address|default:"No residential address recorded" }}</div>
+          </div>
+
+          {% if user_obj.staff_profile %}
+            <div class="col-12 mt-3 pt-3 border-top">
+              <h6 class="fw-bold text-dark mb-2">Staff Designation & Jurisdiction</h6>
+              <div class="row g-2 small">
+                <div class="col-sm-4"><strong>Employee ID:</strong> {{ user_obj.staff_profile.employee_id }}</div>
+                <div class="col-sm-4"><strong>Department:</strong> {{ user_obj.staff_profile.department.name|default:"Unassigned" }}</div>
+                <div class="col-sm-4"><strong>Designation:</strong> {{ user_obj.staff_profile.designation }}</div>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Recent Logins -->
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold text-dark mb-0"><i class="bi bi-shield-check me-2"></i> Recent Login Activity</h5>
+          <a href="{% url 'accounts:login_history' %}" class="small text-decoration-none">View full history</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>Date & Time</th>
+                <th>IP Address</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in recent_logins %}
+                <tr>
+                  <td>{{ h.timestamp|date:"Y-m-d H:i" }}</td>
+                  <td><code>{{ h.ip_address|default:"127.0.0.1" }}</code></td>
+                  <td>
+                    <span class="badge {% if h.status == 'SUCCESS' %}bg-success{% else %}bg-danger{% endif %}">
+                      {{ h.status }}
+                    </span>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-muted text-center py-2">No recent login records found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

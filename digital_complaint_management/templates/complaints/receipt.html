@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Acknowledgment Receipt - {{ complaint.complaint_id }} | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <!-- Action Toolbar -->
+      <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <a href="{% url 'complaints:detail' complaint.complaint_id %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i> Back to Complaint Details
+        </a>
+        <div class="d-flex gap-2">
+          <button onclick="window.print()" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-printer me-1"></i> Print Receipt
+          </button>
+          <a href="{% url 'complaints:receipt_pdf' complaint.complaint_id %}" class="btn btn-primary btn-sm shadow-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Receipt
+          </a>
+        </div>
+      </div>
+
+      <!-- Formal Receipt Card -->
+      <div class="card border rounded-4 shadow-sm p-4 p-md-5 bg-white receipt-card">
+        <!-- Receipt Header -->
+        <div class="text-center border-bottom pb-4 mb-4">
+          <span class="brand-icon mx-auto mb-2" style="width: 48px; height: 48px; font-size: 1.5rem;"><i class="bi bi-shield-check"></i></span>
+          <h2 class="fw-bold tracking-tight text-primary mb-1">{{ PLATFORM_NAME }}</h2>
+          <p class="text-muted small mb-0">{{ PLATFORM_TAGLINE }}</p>
+          <div class="badge bg-success-subtle text-success fs-6 mt-3 px-3 py-2 text-uppercase">
+            <i class="bi bi-check2-circle me-1"></i> Official Complaint Acknowledgment
+          </div>
+        </div>
+
+        <!-- Receipt Table -->
+        <div class="table-responsive mb-4">
+          <table class="table table-bordered align-middle">
+            <tbody>
+              <tr>
+                <th class="bg-light" style="width: 35%;">Complaint Reference ID</th>
+                <td class="fw-bold fs-5 text-primary">{{ complaint.complaint_id }}</td>
+              </tr>
+              <tr>
+                <th class="bg-light">Subject / Title</th>
+                <td class="fw-semibold">{{ complaint.title }}</td>
+              </tr>
+              <tr>
+                <th class="bg-light">Civic Category</th>
+                <td>{{ complaint.category.name }} {% if complaint.subcategory %}({{ complaint.subcategory.name }}){% endif %}</td>
+              </tr>
+              <tr>
+                <th class="bg-light">Responsible Department</th>
+                <td>{{ complaint.department.name|default:"General Civic Services" }}</td>
+              </tr>
+              <tr>
+                <th class="bg-light">Assigned Priority</th>
+                <td><span class="badge {{ complaint.priority_badge_class }}">{{ complaint.get_priority_display }}</span></td>
+              </tr>
+              <tr>
+                <th class="bg-light">Current Registration Status</th>
+                <td><span class="badge {{ complaint.status_badge_class }}">{{ complaint.get_status_display }}</span></td>
+              </tr>
+              <tr>
+                <th class="bg-light">Complainant Name</th>
+                <td>{{ complaint.user.get_full_name|default:complaint.user.username }} ({{ complaint.user.email }})</td>
+              </tr>
+              <tr>
+                <th class="bg-light">Submission Date & Time</th>
+                <td>{{ complaint.created_at|date:"Y-m-d H:i:s" }}</td>
+              </tr>
+              <tr>
+                <th class="bg-light">Target SLA Deadline</th>
+                <td>{{ complaint.due_date|date:"Y-m-d H:i:s"|default:"Standard SLA" }}</td>
+              </tr>
+              <tr>
+                <th class="bg-light">Incident Location</th>
+                <td>{{ complaint.location_address|default:"Location coordinates recorded" }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-4">
+          <h6 class="fw-bold text-dark">Complaint Description:</h6>
+          <div class="p-3 bg-light rounded-3 small text-secondary">
+            {{ complaint.description }}
+          </div>
+        </div>
+
+        <!-- Footer / Watermark Note -->
+        <div class="border-top pt-4 text-center text-muted small">
+          <p class="mb-1 fw-bold text-dark">Thank you for using {{ PLATFORM_NAME }}.</p>
+          <p class="mb-0">You can track live resolution progress at any time by entering your Complaint ID <code>{{ complaint.complaint_id }}</code> on the web portal or visiting your user dashboard.</p>
+          <div class="mt-3 text-secondary" style="font-size: 0.75rem;">
+            Toll-Free Civic Helpdesk: {{ SUPPORT_PHONE }} | Email: {{ SUPPORT_EMAIL }}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

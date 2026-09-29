@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block title %}Register New Complaint | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+        <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+          <div>
+            <h3 class="fw-bold tracking-tight text-primary mb-1">
+              <i class="bi bi-megaphone-fill me-2"></i> Register Civic Complaint
+            </h3>
+            <p class="text-muted small mb-0">Provide complete information and exact geographic location to expedite ground action.</p>
+          </div>
+          <a href="{% url 'complaints:list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Cancel
+          </a>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="complaintForm">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2 small mb-3">
+              {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="row g-4">
+            <!-- Basic Details -->
+            <div class="col-12">
+              <h5 class="fw-bold text-dark border-bottom pb-2">1. Issue Information</h5>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Complaint Title / Summary *</label>
+              {{ form.title }}
+              {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Category *</label>
+              {{ form.category }}
+              {% if form.category.errors %}<div class="text-danger small mt-1">{{ form.category.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Subcategory</label>
+              {{ form.subcategory }}
+              <div class="form-text small" id="subcat-loading" style="display:none;"><i class="bi bi-arrow-repeat spin"></i> Loading subcategories...</div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Priority Level</label>
+              {{ form.priority }}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Detailed Description of Problem *</label>
+              {{ form.description }}
+              {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
+            </div>
+
+            <!-- Location Details -->
+            <div class="col-12 mt-4">
+              <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                <h5 class="fw-bold text-dark mb-0">2. Incident Location & Map Pin</h5>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="btnGeolocate">
+                  <i class="bi bi-crosshair me-1"></i> Use My Current Location
+                </button>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Address / Landmark / Street *</label>
+              {{ form.location_address }}
+              {{ form.latitude }}
+              {{ form.longitude }}
+              <div class="form-text small text-muted">Click or drag the marker on the map below to pinpoint the exact location.</div>
+            </div>
+
+            <div class="col-12">
+              <div id="complaint-picker-map"></div>
+            </div>
+
+            <!-- Attachments -->
+            <div class="col-12 mt-4">
+              <h5 class="fw-bold text-dark border-bottom pb-2">3. Evidence & Attachments</h5>
+              <label class="form-label fw-semibold small">Upload Photos, Documents, or Video Proof (Max 15MB total)</label>
+              <input type="file" name="attachments" multiple class="form-control" accept="image/*,.pdf,.doc,.docx,video/mp4">
+              <div class="form-text small">Accepted formats: JPG, PNG, PDF, DOC, MP4. You can select multiple files at once.</div>
+            </div>
+
+            <div class="col-12 pt-3 border-top d-flex justify-content-between">
+              <a href="{% url 'home' %}" class="btn btn-light px-4">Discard</a>
+              <button type="submit" class="btn btn-primary px-5 py-2 fw-bold shadow">
+                <i class="bi bi-send-fill me-2"></i> Submit Complaint
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Category -> Subcategory dynamic dropdown AJAX
+  const categorySelect = document.getElementById('id_category');
+  const subcategorySelect = document.getElementById('id_subcategory');
+  const loadingIndicator = document.getElementById('subcat-loading');
+
+  categorySelect.addEventListener('change', function() {
+    const catId = this.value;
+    if (!catId) {
+      subcategorySelect.innerHTML = '<option value="">---------</option>';
+      return;
+    }
+
+    loadingIndicator.style.display = 'block';
+    fetch(`/complaints/ajax/subcategories/?category_id=${catId}`)
+      .then(res => res.json())
+      .then(data => {
+        loadingIndicator.style.display = 'none';
+        let options = '<option value="">Select Subcategory</option>';
+        data.forEach(item => {
+          options += `<option value="${item.id}">${item.name}</option>`;
+        });
+        subcategorySelect.innerHTML = options;
+      })
+      .catch(() => {
+        loadingIndicator.style.display = 'none';
+      });
+  });
+
+  // Leaflet Map Initialization
+  const defaultLat = 12.9716;
+  const defaultLng = 77.5946;
+
+  const map = L.map('complaint-picker-map').setView([defaultLat, defaultLng], 13);
+  const tileUrl = "{{ MAP_TILE_URL|escapejs }}";
+  const tileAttr = "{{ MAP_TILE_ATTRIBUTION|escapejs }}";
+  L.tileLayer(tileUrl, {
+    maxZoom: 19,
+    attribution: tileAttr
+  }).addTo(map);
+
+  let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+
+  function updateCoords(lat, lng) {
+    document.getElementById('id_latitude').value = lat.toFixed(7);
+    document.getElementById('id_longitude').value = lng.toFixed(7);
+
+    // Reverse geocode via Nominatim
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.display_name) {
+          const addrField = document.getElementById('id_location_address');
+          if (!addrField.value || addrField.value.trim() === "") {
+            addrField.value = data.display_name;
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
+  // Set initial
+  updateCoords(defaultLat, defaultLng);
+
+  marker.on('dragend', function(e) {
+    const pos = marker.getLatLng();
+    updateCoords(pos.lat, pos.lng);
+  });
+
+  map.on('click', function(e) {
+    marker.setLatLng(e.latlng);
+    updateCoords(e.latlng.lat, e.latlng.lng);
+  });
+
+  // Geolocation button
+  document.getElementById('btnGeolocate').addEventListener('click', function() {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(function(pos) {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        map.setView([lat, lng], 16);
+        marker.setLatLng([lat, lng]);
+        updateCoords(lat, lng);
+      }, function() {
+        alert("Could not access your location. Please drop the pin on the map manually.");
+      });
+    } else {
+      alert("Geolocation is not supported by your browser.");
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Login Activity History | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-shield-lock me-2"></i> Authentication Audit History</h4>
+        <p class="text-muted small mb-0">Record of sign-in attempts, client IPs, and device user-agents</p>
+      </div>
+      <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary btn-sm">Back to Profile</a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light small">
+          <tr>
+            <th>User / Account</th>
+            <th>Attempted Name</th>
+            <th>IP Address</th>
+            <th>Timestamp</th>
+            <th>Status</th>
+            <th>Details / Failure Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in histories %}
+            <tr>
+              <td class="fw-semibold">
+                {% if h.user %}{{ h.user.username }}{% else %}<span class="text-muted">Unregistered</span>{% endif %}
+              </td>
+              <td><code>{{ h.username_attempted }}</code></td>
+              <td><code>{{ h.ip_address|default:"127.0.0.1" }}</code></td>
+              <td>{{ h.timestamp|date:"Y-m-d H:i:s" }}</td>
+              <td>
+                <span class="badge {% if h.status == 'SUCCESS' %}bg-success{% else %}bg-danger{% endif %}">
+                  {{ h.status }}
+                </span>
+              </td>
+              <td class="text-muted small">{{ h.failure_reason|default:"Authenticated successfully" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-4">No login history records found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

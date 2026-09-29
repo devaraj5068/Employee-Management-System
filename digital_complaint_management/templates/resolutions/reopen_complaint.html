@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Reopen Complaint | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-7">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <h4 class="fw-bold mb-2 text-danger"><i class="bi bi-arrow-counterclockwise me-2"></i> Reopen Complaint</h4>
+        <p class="text-muted small mb-4">If the issue was not satisfactorily resolved or has recurred, please explain what remains unaddressed.</p>
+
+        <div class="alert alert-light border mb-4">
+          <strong>Ticket:</strong> {{ complaint.complaint_id }} - {{ complaint.title }}
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-4">
+            {{ form.reason }}
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+            <a href="{% url 'complaints:detail' complaint.complaint_id %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-danger px-4 fw-bold">Confirm Reopen & Escalate</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

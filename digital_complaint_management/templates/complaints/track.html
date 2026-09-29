@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block title %}Track Complaint Status | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <!-- Search Header -->
+      <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white mb-4">
+        <div class="text-center max-w-600 mx-auto mb-4">
+          <span class="brand-icon mx-auto mb-2" style="width: 50px; height: 50px; font-size: 1.5rem;"><i class="bi bi-search"></i></span>
+          <h3 class="fw-bold tracking-tight">Public Complaint Tracker</h3>
+          <p class="text-muted small">Enter your unique Complaint ID (e.g. <code>RN-2026-000001</code>) to check live status and department progress.</p>
+        </div>
+
+        <form method="get" action="{% url 'complaints:track' %}" class="row g-2 justify-content-center">
+          <div class="col-md-7">
+            <input type="text" name="complaint_id" class="form-control form-control-lg text-uppercase" placeholder="Enter Complaint ID (RN-YYYY-XXXXXX)..." value="{{ complaint_id }}" required>
+          </div>
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold">
+              <i class="bi bi-arrow-repeat me-1"></i> Track Status
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Result Section -->
+      {% if searched %}
+        {% if complaint %}
+          <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white mb-4">
+            <!-- Header with Badges -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3 mb-4 gap-2">
+              <div>
+                <span class="badge bg-light text-dark border me-2 fs-6">ID: {{ complaint.complaint_id }}</span>
+                <span class="badge {{ complaint.status_badge_class }} fs-6">{{ complaint.get_status_display }}</span>
+                <span class="badge {{ complaint.priority_badge_class }} ms-1 fs-6">{{ complaint.get_priority_display }} Priority</span>
+                {% if complaint.is_escalated %}
+                  <span class="badge bg-danger text-white ms-1 fs-6 pulse-badge"><i class="bi bi-exclamation-octagon-fill"></i> Escalated (L{{ complaint.escalation_level }})</span>
+                {% endif %}
+              </div>
+              <div>
+                <a href="{% url 'complaints:receipt' complaint.complaint_id %}" class="btn btn-outline-primary btn-sm me-2">
+                  <i class="bi bi-receipt"></i> View Receipt
+                </a>
+                <a href="{% url 'complaints:receipt_pdf' complaint.complaint_id %}" class="btn btn-primary btn-sm">
+                  <i class="bi bi-file-earmark-pdf"></i> Download PDF
+                </a>
+              </div>
+            </div>
+
+            <h4 class="fw-bold text-dark mb-2">{{ complaint.title }}</h4>
+            <p class="text-muted mb-4">{{ complaint.description }}</p>
+
+            <!-- Progress Bar -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between small fw-bold mb-1">
+                <span>Overall Resolution Progress</span>
+                <span>{{ complaint.progress_percentage }}% Completed</span>
+              </div>
+              <div class="progress" style="height: 12px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated {% if complaint.status == 'RESOLVED' or complaint.status == 'CLOSED' %}bg-success{% else %}bg-primary{% endif %}" role="progressbar" style="width: {{ complaint.progress_percentage }}%;"></div>
+              </div>
+            </div>
+
+            <!-- Visual 6-Step Timeline -->
+            <div class="bg-light p-4 rounded-4 mb-4">
+              <h6 class="fw-bold text-center text-muted mb-4 text-uppercase small">Civic Resolution Timeline</h6>
+              <div class="row text-center g-2">
+                <div class="col">
+                  <div class="circle rounded-circle {% if complaint.progress_percentage >= 15 %}bg-success text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %} d-inline-flex align-items-center justify-content-center fw-bold mb-1" style="width: 38px; height: 38px;">1</div>
+                  <div class="small fw-semibold">Submitted</div>
+                </div>
+                <div class="col">
+                  <div class="circle rounded-circle {% if complaint.progress_percentage >= 30 %}bg-success text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %} d-inline-flex align-items-center justify-content-center fw-bold mb-1" style="width: 38px; height: 38px;">2</div>
+                  <div class="small fw-semibold">Under Review</div>
+                </div>
+                <div class="col">
+                  <div class="circle rounded-circle {% if complaint.progress_percentage >= 45 %}bg-success text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %} d-inline-flex align-items-center justify-content-center fw-bold mb-1" style="width: 38px; height: 38px;">3</div>
+                  <div class="small fw-semibold">Assigned</div>
+                </div>
+                <div class="col">
+                  <div class="circle rounded-circle {% if complaint.progress_percentage >= 65 %}bg-warning text-dark{% else %}bg-secondary bg-opacity-25 text-muted{% endif %} d-inline-flex align-items-center justify-content-center fw-bold mb-1" style="width: 38px; height: 38px;">4</div>
+                  <div class="small fw-semibold">In Progress</div>
+                </div>
+                <div class="col">
+                  <div class="circle rounded-circle {% if complaint.progress_percentage >= 90 %}bg-success text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %} d-inline-flex align-items-center justify-content-center fw-bold mb-1" style="width: 38px; height: 38px;">5</div>
+                  <div class="small fw-semibold">Resolved</div>
+                </div>
+                <div class="col">
+                  <div class="circle rounded-circle {% if complaint.progress_percentage >= 100 %}bg-dark text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %} d-inline-flex align-items-center justify-content-center fw-bold mb-1" style="width: 38px; height: 38px;">6</div>
+                  <div class="small fw-semibold">Closed</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Key Information Grid -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-4 col-sm-6">
+                <div class="p-3 border rounded-3">
+                  <div class="text-muted small">Department</div>
+                  <div class="fw-bold">{{ complaint.department.name|default:"General Services" }}</div>
+                </div>
+              </div>
+              <div class="col-md-4 col-sm-6">
+                <div class="p-3 border rounded-3">
+                  <div class="text-muted small">Category</div>
+                  <div class="fw-bold">{{ complaint.category.name }}</div>
+                </div>
+              </div>
+              <div class="col-md-4 col-sm-6">
+                <div class="p-3 border rounded-3">
+                  <div class="text-muted small">Assigned Officer</div>
+                  <div class="fw-bold">
+                    {% if complaint.assigned_staff %}
+                      {{ complaint.assigned_staff.get_full_name|default:complaint.assigned_staff.username }}
+                    {% else %}
+                      <span class="text-muted">Awaiting assignment</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 col-sm-6">
+                <div class="p-3 border rounded-3">
+                  <div class="text-muted small">Submission Date</div>
+                  <div class="fw-bold">{{ complaint.created_at|date:"M d, Y H:i" }}</div>
+                </div>
+              </div>
+              <div class="col-md-4 col-sm-6">
+                <div class="p-3 border rounded-3">
+                  <div class="text-muted small">Target SLA Due Date</div>
+                  <div class="fw-bold {% if complaint.is_overdue %}text-danger{% endif %}">
+                    {{ complaint.due_date|date:"M d, Y H:i"|default:"Standard SLA" }}
+                    {% if complaint.is_overdue %}<span class="badge bg-danger ms-1">Overdue</span>{% endif %}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 col-sm-6">
+                <div class="p-3 border rounded-3">
+                  <div class="text-muted small">Location Address</div>
+                  <div class="fw-bold text-truncate">{{ complaint.location_address|default:"Not specified" }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resolution Details if available -->
+            {% if complaint.resolution %}
+              <div class="alert alert-success border-success rounded-3 p-4 mb-4">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                  <h5 class="fw-bold text-success mb-0">Official Resolution Summary</h5>
+                </div>
+                <p class="mb-2">{{ complaint.resolution.description }}</p>
+                {% if complaint.resolution.remarks %}
+                  <p class="small text-muted mb-0"><strong>Remarks:</strong> {{ complaint.resolution.remarks }}</p>
+                {% endif %}
+                <div class="small text-muted mt-2">Resolved on: {{ complaint.resolution.resolved_at|date:"M d, Y H:i" }}</div>
+              </div>
+            {% endif %}
+
+            <!-- Activity Logs History -->
+            <h5 class="fw-bold mb-3"><i class="bi bi-clock-history me-2"></i> Status Transition History</h5>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle">
+                <thead class="table-light small">
+                  <tr>
+                    <th>Date & Time</th>
+                    <th>Transition</th>
+                    <th>Officer / System</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for h in complaint.history_logs.all %}
+                    <tr>
+                      <td class="small">{{ h.created_at|date:"Y-m-d H:i" }}</td>
+                      <td>
+                        <span class="badge bg-secondary">{{ h.previous_status|default:"Start" }}</span>
+                        <i class="bi bi-arrow-right mx-1"></i>
+                        <span class="badge bg-primary">{{ h.new_status }}</span>
+                      </td>
+                      <td class="small">{% if h.changed_by %}{{ h.changed_by.get_full_name|default:h.changed_by.username }}{% else %}System Dispatcher{% endif %}</td>
+                      <td class="small text-muted">{{ h.remarks }}</td>
+                    </tr>
+                  {% empty %}
+                    <tr><td colspan="4" class="text-muted text-center py-2">No history logs recorded.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% if user.is_authenticated and user == complaint.user or user.role in 'STAFF,ADMIN' %}
+              <div class="mt-4 pt-3 border-top text-end">
+                <a href="{% url 'complaints:detail' complaint.complaint_id %}" class="btn btn-outline-primary">
+                  Open Full Management Page <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+              </div>
+            {% endif %}
+
+          </div>
+        {% else %}
+          <div class="card border-0 shadow-sm rounded-4 p-5 bg-white text-center">
+            <div class="text-muted fs-1 mb-3"><i class="bi bi-folder-x"></i></div>
+            <h4 class="fw-bold">No Complaint Found</h4>
+            <p class="text-muted">No registered complaint matching ID "<strong>{{ complaint_id }}</strong>" was found in the database. Please verify the ID and try again.</p>
+          </div>
+        {% endif %}
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}

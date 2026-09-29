@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Geospatial Complaints Map | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-3">
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      <h3 class="fw-bold tracking-tight text-primary mb-1">
+        <i class="bi bi-map-fill me-2"></i> City-Wide Geospatial Complaint Map
+      </h3>
+      <p class="text-muted small mb-0">Interactive Leaflet GIS map visualizing reported civic issues and locations.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <!-- Filter Dropdowns -->
+      <select id="mapFilterPriority" class="form-select form-select-sm" style="width: 140px;">
+        <option value="">All Priorities</option>
+        <option value="CRITICAL">Critical</option>
+        <option value="HIGH">High</option>
+        <option value="MEDIUM">Medium</option>
+        <option value="LOW">Low</option>
+      </select>
+      <select id="mapFilterStatus" class="form-select form-select-sm" style="width: 140px;">
+        <option value="">All Statuses</option>
+        <option value="SUBMITTED">Submitted</option>
+        <option value="IN_PROGRESS">In Progress</option>
+        <option value="RESOLVED">Resolved</option>
+      </select>
+      <button type="button" class="btn btn-primary btn-sm" id="btnRefreshMarkers">
+        <i class="bi bi-arrow-repeat me-1"></i> Refresh Map
+      </button>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4 p-2 bg-white">
+    <div id="map-fullscreen"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const map = L.map('map-fullscreen').setView([12.9716, 77.5946], 12);
+
+  const tileUrl = "{{ MAP_TILE_URL|escapejs }}";
+  const tileAttr = "{{ MAP_TILE_ATTRIBUTION|escapejs }}";
+  L.tileLayer(tileUrl, {
+    maxZoom: 19,
+    attribution: tileAttr
+  }).addTo(map);
+
+  let markersLayer = L.layerGroup().addTo(map);
+
+  function getMarkerColor(priority) {
+    switch(priority) {
+      case 'CRITICAL': return '#dc3545';
+      case 'HIGH': return '#ffc107';
+      case 'MEDIUM': return '#0dcaf0';
+      case 'LOW': return '#198754';
+      default: return '#0d6efd';
+    }
+  }
+
+  function loadMarkers() {
+    const priority = document.getElementById('mapFilterPriority').value;
+    const status = document.getElementById('mapFilterStatus').value;
+
+    let url = `/location/api/markers/?`;
+    if (priority) url += `priority=${priority}&`;
+    if (status) url += `status=${status}&`;
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        markersLayer.clearLayers();
+        const markers = data.markers;
+
+        if (markers.length > 0) {
+          const group = [];
+          markers.forEach(m => {
+            const circle = L.circleMarker([m.lat, m.lng], {
+              radius: m.priority === 'CRITICAL' ? 12 : 9,
+              fillColor: getMarkerColor(m.priority),
+              color: '#ffffff',
+              weight: 2,
+              opacity: 1,
+              fillOpacity: 0.85
+            });
+
+            const popupContent = `
+              <div style="min-width: 180px;">
+                <span class="badge" style="background-color: ${getMarkerColor(m.priority)}">${m.priority}</span>
+                <span class="badge bg-secondary">${m.status}</span>
+                <h6 class="fw-bold mt-2 mb-1">${m.title}</h6>
+                <p class="small text-muted mb-1">${m.address}</p>
+                <div class="small mb-2 text-primary"><strong>ID:</strong> ${m.id}</div>
+                <a href="${m.url}" class="btn btn-sm btn-primary w-100 text-white" style="font-size: 0.75rem;">View Complaint</a>
+              </div>
+            `;
+            circle.bindPopup(popupContent);
+            markersLayer.addLayer(circle);
+            group.push([m.lat, m.lng]);
+          });
+
+          map.fitBounds(group, { padding: [40, 40] });
+        }
+      })
+      .catch(() => {});
+  }
+
+  loadMarkers();
+
+  document.getElementById('btnRefreshMarkers').addEventListener('click', loadMarkers);
+  document.getElementById('mapFilterPriority').addEventListener('change', loadMarkers);
+  document.getElementById('mapFilterStatus').addEventListener('change', loadMarkers);
+});
+</script>
+{% endblock %}

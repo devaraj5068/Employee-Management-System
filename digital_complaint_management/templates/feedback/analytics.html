@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Citizen Ratings & Feedback Analytics | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="fw-bold tracking-tight text-primary mb-1">
+        <i class="bi bi-star-fill me-2 text-warning"></i> Citizen Satisfaction & Ratings
+      </h3>
+      <p class="text-muted small mb-0">Aggregated feedback metrics on resolution quality and officer efficiency.</p>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white text-center h-100">
+        <h6 class="text-muted text-uppercase small fw-bold">Platform Average Rating</h6>
+        <div class="display-3 fw-bold text-warning my-2">{{ avg_rating }}</div>
+        <div class="text-muted small">Out of 5.0 Stars &bull; Total {{ total_feedbacks }} Reviews</div>
+      </div>
+    </div>
+
+    <div class="col-md-8">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+        <h6 class="fw-bold mb-3">Rating Breakdown</h6>
+        {% for r in rating_breakdown %}
+          <div class="d-flex align-items-center mb-2 small">
+            <span style="width: 70px;">{{ r.rating }} Stars:</span>
+            <div class="progress flex-grow-1 mx-2" style="height: 8px;">
+              <div class="progress-bar bg-warning" style="width: {% widthratio r.total total_feedbacks 100 %}%;"></div>
+            </div>
+            <span class="text-muted" style="width: 50px;">{{ r.total }} ({% widthratio r.total total_feedbacks 100 %}%)</span>
+          </div>
+        {% empty %}
+          <p class="text-muted small">No rating data available yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedbacks Table -->
+  <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-chat-heart me-2 text-primary"></i> Citizen Reviews</h5>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light">
+          <tr>
+            <th>Ticket ID</th>
+            <th>Citizen</th>
+            <th>Department</th>
+            <th>Rating</th>
+            <th>Satisfaction</th>
+            <th>Quality</th>
+            <th>Comments</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fb in feedbacks %}
+            <tr>
+              <td><a href="{% url 'complaints:detail' fb.complaint.complaint_id %}" class="fw-bold">{{ fb.complaint.complaint_id }}</a></td>
+              <td>{{ fb.user.username }}</td>
+              <td>{{ fb.complaint.department.code|default:"GEN" }}</td>
+              <td class="text-warning fw-bold">{{ fb.stars_display }}</td>
+              <td><span class="badge bg-light text-dark border">{{ fb.get_satisfaction_level_display }}</span></td>
+              <td><span class="badge bg-success-subtle text-success">{{ fb.get_resolution_quality_display }}</span></td>
+              <td class="text-truncate" style="max-width: 260px;">{{ fb.comments|default:"-" }}</td>
+              <td class="text-muted">{{ fb.created_at|date:"Y-m-d" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8" class="text-center py-4 text-muted">No citizen reviews recorded yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

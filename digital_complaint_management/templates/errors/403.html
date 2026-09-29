@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}403 Forbidden | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+  <div class="py-5 max-w-600 mx-auto">
+    <div class="display-1 fw-bold text-danger mb-3">403</div>
+    <h2 class="fw-bold mb-3">Access Denied / Forbidden</h2>
+    <p class="text-muted lead mb-4">You do not have permission to view this restricted civic administrative page or resource.</p>
+    <a href="{% url 'home' %}" class="btn btn-primary px-4 py-2">Return to Home</a>
+  </div>
+</div>
+{% endblock %}

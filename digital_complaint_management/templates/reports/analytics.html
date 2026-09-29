@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports & Analytics | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+
+  <!-- Header & Export Toolbar -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h3 class="fw-bold tracking-tight text-primary mb-1">
+        <i class="bi bi-file-earmark-bar-graph me-2"></i> Reports & Civic Analytics
+      </h3>
+      <p class="text-muted small mb-0">Generate executive performance metrics, department resolution rates, and export compliant datasets.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'reports:export_pdf' %}?period={{ current_period }}&department={{ current_dept }}" class="btn btn-danger btn-sm shadow-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF Report
+      </a>
+      <a href="{% url 'reports:export_excel' %}?period={{ current_period }}&department={{ current_dept }}" class="btn btn-success btn-sm shadow-sm">
+        <i class="bi bi-file-earmark-excel me-1"></i> Export Excel (.xlsx)
+      </a>
+      <a href="{% url 'reports:export_csv' %}?period={{ current_period }}&department={{ current_dept }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-filetype-csv me-1"></i> Export CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- Time Period Filter Bar -->
+  <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-4">
+    <form method="get" class="row g-3 align-items-center">
+      <div class="col-md-4">
+        <div class="btn-group w-100" role="group">
+          <a href="?period=daily&department={{ current_dept }}" class="btn btn-sm {% if current_period == 'daily' %}btn-primary{% else %}btn-outline-primary{% endif %}">Daily</a>
+          <a href="?period=weekly&department={{ current_dept }}" class="btn btn-sm {% if current_period == 'weekly' %}btn-primary{% else %}btn-outline-primary{% endif %}">Weekly</a>
+          <a href="?period=monthly&department={{ current_dept }}" class="btn btn-sm {% if current_period == 'monthly' %}btn-primary{% else %}btn-outline-primary{% endif %}">Monthly</a>
+          <a href="?period=yearly&department={{ current_dept }}" class="btn btn-sm {% if current_period == 'yearly' %}btn-primary{% else %}btn-outline-primary{% endif %}">Yearly</a>
+        </div>
+      </div>
+      <div class="col-md-5">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-light">Filter Department:</span>
+          <select name="department" class="form-select" onchange="this.form.submit()">
+            <option value="">All Departments</option>
+            {% for d in departments %}
+              <option value="{{ d.id }}" {% if current_dept == d.id|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>
+            {% endfor %}
+          </select>
+          <input type="hidden" name="period" value="{{ current_period }}">
+        </div>
+      </div>
+      <div class="col-md-3 text-md-end text-muted small">
+        Period: <strong class="text-dark text-uppercase">{{ current_period }}</strong>
+      </div>
+    </form>
+  </div>
+
+  <!-- KPI Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="text-muted small fw-semibold">Total Registered</div>
+        <div class="fs-2 fw-bold text-primary">{{ total }}</div>
+        <small class="text-muted">In selected period</small>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="text-muted small fw-semibold">Resolved & Closed</div>
+        <div class="fs-2 fw-bold text-success">{{ resolved }}</div>
+        <small class="text-success">{{ resolution_rate }}% Resolution Rate</small>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="text-muted small fw-semibold">Pending Resolution</div>
+        <div class="fs-2 fw-bold text-warning">{{ pending }}</div>
+        <small class="text-warning">Active in field queue</small>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="text-muted small fw-semibold">SLA Escalations</div>
+        <div class="fs-2 fw-bold text-danger">{{ escalated }}</div>
+        <small class="text-danger">Target breaches</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Department Performance Breakdown Table -->
+  <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-bar-chart-steps me-2 text-primary"></i> Department Performance Breakdown</h5>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light small">
+          <tr>
+            <th>Department</th>
+            <th>Total Complaints</th>
+            <th>Resolved</th>
+            <th>Resolution Rate</th>
+            <th>SLA Breaches</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for st in dept_stats %}
+            <tr>
+              <td class="fw-semibold">{{ st.department__name|default:"Unassigned" }}</td>
+              <td>{{ st.total }}</td>
+              <td class="text-success fw-bold">{{ st.resolved_cnt }}</td>
+              <td style="min-width: 140px;">
+                <div class="progress" style="height: 6px;">
+                  <div class="progress-bar bg-success" style="width: {% widthratio st.resolved_cnt st.total 100 %}%;"></div>
+                </div>
+                <small class="text-muted">{% widthratio st.resolved_cnt st.total 100 %}%</small>
+              </td>
+              <td>
+                {% if st.escalated_cnt > 0 %}
+                  <span class="badge bg-danger">{{ st.escalated_cnt }} Breaches</span>
+                {% else %}
+                  <span class="badge bg-success">100% On-Time</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="text-center py-3 text-muted">No department data for this period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Detailed Complaints Snapshot Table -->
+  <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="fw-bold text-dark mb-0"><i class="bi bi-list-check me-2 text-secondary"></i> Complaints Snapshot (Top 25)</h5>
+      <span class="text-muted small">Export full dataset using the toolbar above</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Department</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Citizen</th>
+            <th>Assigned Officer</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in complaints %}
+            <tr>
+              <td><a href="{% url 'complaints:detail' c.complaint_id %}" class="fw-bold">{{ c.complaint_id }}</a></td>
+              <td class="text-truncate" style="max-width: 220px;">{{ c.title }}</td>
+              <td>{{ c.department.code|default:"GEN" }}</td>
+              <td><span class="badge {{ c.priority_badge_class }}">{{ c.get_priority_display }}</span></td>
+              <td><span class="badge {{ c.status_badge_class }}">{{ c.get_status_display }}</span></td>
+              <td>{{ c.user.username }}</td>
+              <td>{{ c.assigned_staff.username|default:"-" }}</td>
+              <td>{{ c.created_at|date:"Y-m-d" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8" class="text-center py-4 text-muted">No complaints recorded in this period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

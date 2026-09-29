@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Notification Center | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <div>
+            <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-bell-fill me-2"></i> Notification Center</h4>
+            <p class="text-muted small mb-0">System notifications and lifecycle status alerts</p>
+          </div>
+          {% if notifications %}
+            <a href="{% url 'notifications:mark_all_read' %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-check2-all me-1"></i> Mark All as Read
+            </a>
+          {% endif %}
+        </div>
+
+        <ul class="list-group list-group-flush">
+          {% for n in notifications %}
+            <li class="list-group-item px-0 py-3 d-flex justify-content-between align-items-start {% if not n.is_read %}bg-light px-3 rounded-3 mb-2 border{% endif %}">
+              <div class="d-flex gap-3">
+                <div class="mt-1">
+                  {% if n.notification_type == 'URGENT' %}
+                    <i class="bi bi-exclamation-triangle-fill text-danger fs-4"></i>
+                  {% elif n.notification_type == 'SUCCESS' %}
+                    <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                  {% elif n.notification_type == 'WARNING' %}
+                    <i class="bi bi-exclamation-circle-fill text-warning fs-4"></i>
+                  {% else %}
+                    <i class="bi bi-info-circle-fill text-primary fs-4"></i>
+                  {% endif %}
+                </div>
+                <div>
+                  <h6 class="fw-bold mb-1">{{ n.title }}</h6>
+                  <p class="text-muted small mb-2">{{ n.message }}</p>
+                  <small class="text-secondary">{{ n.created_at|timesince }} ago</small>
+                  {% if n.link %}
+                    &bull; <a href="{% url 'notifications:mark_read' n.id %}" class="small text-primary text-decoration-none">Open Ticket &rarr;</a>
+                  {% endif %}
+                </div>
+              </div>
+              <div>
+                <a href="{% url 'notifications:delete' n.id %}" class="text-muted small text-decoration-none" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </a>
+              </div>
+            </li>
+          {% empty %}
+            <li class="text-center text-muted py-5">
+              <div class="fs-1 mb-2"><i class="bi bi-bell-slash"></i></div>
+              <h6>No notifications yet</h6>
+              <p class="small">You will receive alerts here when complaint statuses change or assignments are made.</p>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}System Settings & Config | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+        <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-sliders me-2"></i> Platform System Configurations</h4>
+        <p class="text-muted small mb-4">Adjust operational constants, SLA guidelines, helpline information, and brand settings without editing code.</p>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="table-responsive mb-4">
+            <table class="table align-middle">
+              <thead class="table-light small">
+                <tr>
+                  <th style="width: 35%;">Configuration Key</th>
+                  <th>Configured Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for cfg in configs %}
+                  <tr>
+                    <td>
+                      <strong>{{ cfg.key }}</strong>
+                      {% if cfg.description %}
+                        <div class="text-muted small" style="font-size: 0.75rem;">{{ cfg.description }}</div>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <input type="text" name="config_{{ cfg.id }}" class="form-control form-control-sm" value="{{ cfg.value }}">
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="2" class="text-center text-muted">No configuration records found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary px-4 shadow-sm">Save All Settings</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Submit Resolution | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+        <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+          <div>
+            <span class="badge bg-success-subtle text-success fw-bold text-uppercase px-3 py-1 mb-2">Field Completion</span>
+            <h3 class="fw-bold tracking-tight text-success mb-1">
+              <i class="bi bi-check2-circle me-2"></i> Submit Complaint Resolution
+            </h3>
+            <p class="text-muted small mb-0">Record repairs and upload photographic proof to close ticket [{{ complaint.complaint_id }}].</p>
+          </div>
+          <a href="{% url 'complaints:detail' complaint.complaint_id %}" class="btn btn-outline-secondary btn-sm">
+            Cancel
+          </a>
+        </div>
+
+        <div class="alert alert-light border p-3 rounded-3 mb-4">
+          <div class="fw-bold">{{ complaint.title }}</div>
+          <div class="small text-muted">Category: {{ complaint.category.name }} | Location: {{ complaint.location_address|default:"N/A" }}</div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Work Carried Out / Resolution Description *</label>
+            {{ form.description }}
+            <div class="form-text small">Detailed explanation of engineering/maintenance actions performed.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Operational Remarks / Preventive Maintenance Recommendations</label>
+            {{ form.remarks }}
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Photo Proof of Completion (Before/After)</label>
+              {{ form.resolution_proof }}
+              <div class="form-text small">Upload image showing repaired work site (JPG, PNG).</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Work Order / Inspection Sheet (Optional)</label>
+              {{ form.resolution_document }}
+              <div class="form-text small">Upload signed job card or report (PDF, DOC).</div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{% url 'complaints:detail' complaint.complaint_id %}" class="btn btn-secondary">Discard</a>
+            <button type="submit" class="btn btn-success px-4 fw-bold">
+              <i class="bi bi-check2-circle me-1"></i> Submit Resolution & Mark Resolved
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

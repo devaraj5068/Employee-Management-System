@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify Your Email | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5 bg-white text-center">
+        <span class="brand-icon mx-auto mb-3" style="width: 56px; height: 56px; font-size: 1.7rem; background-color: #eff6ff; color: #2563eb; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
+          <i class="bi bi-shield-lock-fill"></i>
+        </span>
+        <h3 class="fw-bold mb-1">ResolveNow</h3>
+        <h5 class="fw-semibold text-secondary mb-3">Verify Your Email</h5>
+        
+        <p class="text-muted small mb-2">
+          A 6-digit verification code has been sent to:
+        </p>
+        <p class="mb-4">
+          <strong class="text-dark font-monospace fs-5 px-3 py-1 bg-light rounded-pill border">{{ masked_email }}</strong>
+        </p>
+
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show text-start small mb-3" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <form method="post" action="{% url 'accounts:verify_otp' %}" class="mb-4" autocomplete="off">
+          {% csrf_token %}
+          <div class="mb-3">
+            <input
+              type="text"
+              name="otp"
+              id="id_otp"
+              class="form-control form-control-lg text-center fw-bold fs-3 letter-spacing"
+              maxlength="6"
+              minlength="6"
+              inputmode="numeric"
+              pattern="[0-9]{6}"
+              autocomplete="one-time-code"
+              placeholder="------"
+              required
+              autofocus
+              style="letter-spacing: 0.5rem;"
+            >
+            <div class="form-text small text-center mt-2 text-muted">
+              <i class="bi bi-clock me-1"></i> OTP expires in 5 minutes &bull; Maximum 5 attempts
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm">
+            <i class="bi bi-check2-circle me-1"></i> Verify OTP
+          </button>
+        </form>
+
+        <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+          <span class="text-muted small">Didn't receive the code?</span>
+          <div id="resendContainer">
+            {% if cooldown_remaining > 0 %}
+              <button id="resendBtn" class="btn btn-sm btn-outline-secondary" disabled>
+                <i class="bi bi-hourglass-split me-1"></i> Resend OTP in <span id="cooldownSeconds">{{ cooldown_remaining }}</span>s
+              </button>
+            {% else %}
+              <a id="resendLink" href="{% url 'accounts:resend_otp' %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-clockwise me-1"></i> Resend OTP
+              </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="mt-4 pt-2 text-center">
+          <a href="{% url 'accounts:register' %}" class="text-muted small text-decoration-none">
+            <i class="bi bi-arrow-left me-1"></i> Back to Registration
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  let seconds = {{ cooldown_remaining|default:0 }};
+  const timerSpan = document.getElementById("cooldownSeconds");
+  const container = document.getElementById("resendContainer");
+
+  if (seconds > 0 && timerSpan) {
+    const interval = setInterval(function() {
+      seconds--;
+      if (timerSpan) {
+        timerSpan.textContent = seconds;
+      }
+      if (seconds <= 0) {
+        clearInterval(interval);
+        container.innerHTML = `
+          <a id="resendLink" href="{% url 'accounts:resend_otp' %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-arrow-clockwise me-1"></i> Resend OTP
+          </a>
+        `;
+      }
+    }, 1000);
+  }
+});
+</script>
+{% endblock %}

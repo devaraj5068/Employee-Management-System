@@ -1,0 +1,418 @@
+{% extends 'base.html' %}
+
+{% block title %}Executive Admin Dashboard | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+
+  <!-- Header with Quick Action Controls -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h3 class="fw-bold tracking-tight text-primary mb-1">
+        <i class="bi bi-speedometer2 me-2"></i> Executive Command Center
+      </h3>
+      <p class="text-muted small mb-0">City-wide complaint monitoring, SLA compliance, officer workloads, and analytics.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'escalation:scan' %}" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-shield-exclamation me-1"></i> Scan SLA Overdue
+      </a>
+      <a href="{% url 'reports:analytics' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-file-earmark-bar-graph me-1"></i> Reports & Export
+      </a>
+      <a href="{% url 'audit:logs' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-shield-lock me-1"></i> Audit Logs
+      </a>
+    </div>
+  </div>
+
+  <!-- Primary Metric Cards Row 1 -->
+  <div class="row g-3 mb-3">
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Total Complaints</div>
+            <div class="fs-3 fw-bold text-dark">{{ total_complaints }}</div>
+          </div>
+          <div class="stat-icon-wrapper bg-primary bg-opacity-10 text-primary">
+            <i class="bi bi-inbox-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Today's New</div>
+            <div class="fs-3 fw-bold text-info">{{ today_count }}</div>
+          </div>
+          <div class="stat-icon-wrapper bg-info bg-opacity-10 text-info">
+            <i class="bi bi-calendar-event"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">In Progress</div>
+            <div class="fs-3 fw-bold text-warning">{{ in_progress_count }}</div>
+          </div>
+          <div class="stat-icon-wrapper bg-warning bg-opacity-10 text-warning">
+            <i class="bi bi-hammer"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Resolved / Closed</div>
+            <div class="fs-3 fw-bold text-success">{{ resolved_count|add:closed_count }}</div>
+          </div>
+          <div class="stat-icon-wrapper bg-success bg-opacity-10 text-success">
+            <i class="bi bi-check-circle-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Critical Hazard</div>
+            <div class="fs-3 fw-bold text-danger">{{ critical_count }}</div>
+          </div>
+          <div class="stat-icon-wrapper bg-danger bg-opacity-10 text-danger pulse-badge">
+            <i class="bi bi-exclamation-octagon-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white stat-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">SLA Overdue</div>
+            <div class="fs-3 fw-bold text-danger">{{ overdue_count }}</div>
+          </div>
+          <div class="stat-icon-wrapper bg-danger bg-opacity-10 text-danger">
+            <i class="bi bi-alarm-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Distribution Breakdown Pills -->
+  <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-4">
+    <div class="d-flex flex-wrap gap-3 small text-muted justify-content-between align-items-center">
+      <span><strong>Lifecycle Statuses:</strong></span>
+      <span>Submitted: <strong class="text-dark">{{ submitted_count }}</strong></span>
+      <span>Under Review: <strong class="text-dark">{{ under_review_count }}</strong></span>
+      <span>In Progress: <strong class="text-dark">{{ in_progress_count }}</strong></span>
+      <span>Resolved: <strong class="text-success">{{ resolved_count }}</strong></span>
+      <span>Closed: <strong class="text-secondary">{{ closed_count }}</strong></span>
+      <span>Rejected: <strong class="text-muted">{{ rejected_count }}</strong></span>
+      <span>Reopened: <strong class="text-danger">{{ reopened_count }}</strong></span>
+    </div>
+  </div>
+
+  <!-- Charts Row 1: Status Donut & Priority Pie -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-pie-chart me-2 text-primary"></i> Status Distribution</h6>
+        <div style="height: 250px; position: relative;">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-flag me-2 text-warning"></i> Priority Breakdown</h6>
+        <div style="height: 250px; position: relative;">
+          <canvas id="priorityChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-graph-up me-2 text-success"></i> 6-Month Trend</h6>
+        <div style="height: 250px; position: relative;">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 2: Category & Department Bar Charts -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-tags me-2 text-info"></i> Top Complaint Categories</h6>
+        <div style="height: 260px; position: relative;">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-building me-2 text-primary"></i> Department Ticket Load</h6>
+        <div style="height: 260px; position: relative;">
+          <canvas id="departmentChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Critical & Escalated Alerts Section -->
+  {% if critical_complaints %}
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4 border-start border-4 border-danger">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-danger mb-0">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i> Critical & Escalated Tickets Requiring Immediate Action
+        </h5>
+        <a href="{% url 'escalation:dashboard' %}" class="btn btn-outline-danger btn-sm">Escalation Center</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light small">
+            <tr>
+              <th>ID</th>
+              <th>Issue Title</th>
+              <th>Department</th>
+              <th>Priority</th>
+              <th>Level</th>
+              <th>Assigned Officer</th>
+              <th>SLA Status</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in critical_complaints %}
+              <tr>
+                <td><a href="{% url 'complaints:detail' c.complaint_id %}" class="fw-bold text-danger">{{ c.complaint_id }}</a></td>
+                <td class="fw-semibold small text-truncate" style="max-width: 240px;">{{ c.title }}</td>
+                <td class="small">{{ c.department.name|default:"General" }}</td>
+                <td><span class="badge {{ c.priority_badge_class }}">{{ c.get_priority_display }}</span></td>
+                <td><span class="badge bg-danger">Level {{ c.escalation_level }}</span></td>
+                <td class="small">
+                  {% if c.assigned_staff %}
+                    {{ c.assigned_staff.get_full_name|default:c.assigned_staff.username }}
+                  {% else %}
+                    <span class="text-muted">Unassigned</span>
+                  {% endif %}
+                </td>
+                <td class="small {% if c.is_overdue %}text-danger fw-bold{% endif %}">
+                  {{ c.due_date|date:"M d, H:i"|default:"-" }}
+                  {% if c.is_overdue %}<span class="badge bg-danger ms-1">OVERDUE</span>{% endif %}
+                </td>
+                <td class="text-end">
+                  <a href="{% url 'complaints:detail' c.complaint_id %}" class="btn btn-danger btn-sm">Take Action</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Tables Row: Staff Workload & Recent Activity Feed -->
+  <div class="row g-4 mb-4">
+    <!-- Staff Workload Table -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold text-dark mb-0"><i class="bi bi-people me-2 text-primary"></i> Field Officers Workload</h5>
+          <a href="{% url 'staff:workload' %}" class="small text-decoration-none">Full Capacity View</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>Officer</th>
+                <th>Department</th>
+                <th>Active Capacity</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sp in staff_profiles %}
+                <tr>
+                  <td><strong>{{ sp.user.get_full_name|default:sp.user.username }}</strong></td>
+                  <td>{{ sp.department.code|default:"GEN" }}</td>
+                  <td style="min-width: 130px;">
+                    <div class="d-flex justify-content-between mb-1" style="font-size: 0.75rem;">
+                      <span>{{ sp.current_active_complaints_count }} / {{ sp.max_active_capacity }}</span>
+                      <span>{{ sp.workload_percentage }}%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                      <div class="progress-bar {% if sp.workload_percentage > 80 %}bg-danger{% elif sp.workload_percentage > 50 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ sp.workload_percentage }}%;"></div>
+                    </div>
+                  </td>
+                  <td>
+                    {% if sp.is_available %}
+                      <span class="badge bg-success" style="font-size: 0.65rem;">Active</span>
+                    {% else %}
+                      <span class="badge bg-secondary" style="font-size: 0.65rem;">Leave</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-3">No staff members enrolled.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Activity Audit Feed -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold text-dark mb-0"><i class="bi bi-activity me-2 text-info"></i> Recent System Activity</h5>
+          <a href="{% url 'audit:logs' %}" class="small text-decoration-none">View All Logs</a>
+        </div>
+        <ul class="list-group list-group-flush small">
+          {% for a in recent_activities %}
+            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+              <div>
+                <span class="badge bg-secondary me-1">{{ a.get_action_display }}</span>
+                <span class="text-dark">{{ a.description|truncatechars:55 }}</span>
+                <div class="text-muted" style="font-size: 0.72rem;">By: {% if a.user %}{{ a.user.username }}{% else %}System{% endif %}</div>
+              </div>
+              <span class="text-muted" style="font-size: 0.72rem;">{{ a.created_at|timesince }} ago</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item px-0 text-muted">No activity logs recorded.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Chart 1: Status Donut
+  const statusLabels = {{ chart_status_labels_json|safe }};
+  const statusData = {{ chart_status_data_json|safe }};
+  new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: statusLabels,
+      datasets: [{
+        data: statusData,
+        backgroundColor: ['#0d6efd', '#6c757d', '#0dcaf0', '#ffc107', '#212529', '#198754', '#dc3545', '#adb5bd', '#fd7e14']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+    }
+  });
+
+  // Chart 2: Priority Pie
+  const priorityLabels = {{ chart_priority_labels_json|safe }};
+  const priorityData = {{ chart_priority_data_json|safe }};
+  new Chart(document.getElementById('priorityChart'), {
+    type: 'pie',
+    data: {
+      labels: priorityLabels,
+      datasets: [{
+        data: priorityData,
+        backgroundColor: ['#198754', '#0dcaf0', '#ffc107', '#dc3545']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+    }
+  });
+
+  // Chart 3: Monthly Trend Line
+  const trendLabels = {{ chart_trend_labels_json|safe }};
+  const trendData = {{ chart_trend_data_json|safe }};
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: trendLabels,
+      datasets: [{
+        label: 'Tickets',
+        data: trendData,
+        borderColor: '#198754',
+        backgroundColor: 'rgba(25, 135, 84, 0.1)',
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // Chart 4: Category Bar
+  const catLabels = {{ chart_cat_labels_json|safe }};
+  const catData = {{ chart_cat_data_json|safe }};
+  new Chart(document.getElementById('categoryChart'), {
+    type: 'bar',
+    data: {
+      labels: catLabels,
+      datasets: [{
+        data: catData,
+        backgroundColor: '#0dcaf0'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // Chart 5: Department Bar
+  const deptLabels = {{ chart_dept_labels_json|safe }};
+  const deptData = {{ chart_dept_data_json|safe }};
+  new Chart(document.getElementById('departmentChart'), {
+    type: 'bar',
+    data: {
+      labels: deptLabels,
+      datasets: [{
+        data: deptData,
+        backgroundColor: '#0d6efd'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+});
+</script>
+{% endblock %}
