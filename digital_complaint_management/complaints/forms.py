@@ -41,6 +41,60 @@ class ComplaintRegistrationForm(forms.ModelForm):
         else:
             self.fields['subcategory'].queryset = SubCategory.objects.none()
 
+    def clean(self):
+        cleaned_data = super().clean()
+        lat = cleaned_data.get('latitude')
+        lng = cleaned_data.get('longitude')
+        address = cleaned_data.get('location_address')
+
+        if lat is None or lng is None:
+            raise forms.ValidationError("Please select a valid complaint location on the map.")
+
+        try:
+            lat_float = float(lat)
+            lng_float = float(lng)
+        except (ValueError, TypeError):
+            raise forms.ValidationError("Please select a valid complaint location on the map.")
+
+        if not (-90.0 <= lat_float <= 90.0 and -180.0 <= lng_float <= 180.0):
+            raise forms.ValidationError("Invalid coordinates provided. Please select a valid location on the map.")
+
+        if not address or not str(address).strip():
+            raise forms.ValidationError("Please provide or confirm the incident address / landmark.")
+
+        return cleaned_data
+
+
+class ComplaintLocationUpdateForm(forms.ModelForm):
+    """Admin / Staff form to correct a complaint's geospatial location and address."""
+    class Meta:
+        model = Complaint
+        fields = ['location_address', 'latitude', 'longitude']
+        widgets = {
+            'location_address': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_admin_location_address', 'placeholder': 'Street, Area, Landmark, City'}),
+            'latitude': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_admin_latitude', 'step': 'any'}),
+            'longitude': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_admin_longitude', 'step': 'any'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        lat = cleaned_data.get('latitude')
+        lng = cleaned_data.get('longitude')
+
+        if lat is None or lng is None:
+            raise forms.ValidationError("Please specify valid latitude and longitude coordinates.")
+
+        try:
+            lat_float = float(lat)
+            lng_float = float(lng)
+        except (ValueError, TypeError):
+            raise forms.ValidationError("Coordinates must be valid decimal numbers.")
+
+        if not (-90.0 <= lat_float <= 90.0 and -180.0 <= lng_float <= 180.0):
+            raise forms.ValidationError("Coordinates must be between -90..90 for latitude and -180..180 for longitude.")
+
+        return cleaned_data
+
 
 class ComplaintStatusUpdateForm(forms.Form):
     status = forms.ChoiceField(

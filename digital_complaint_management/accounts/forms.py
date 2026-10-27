@@ -1,5 +1,4 @@
 from django import forms
-from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from .models import CustomUser
 
@@ -56,26 +55,13 @@ class UserRegistrationForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
-        email = self.cleaned_data['email'].strip().lower()
-        existing = CustomUser.objects.filter(email__iexact=email).first()
-        if existing and not existing.is_verified:
-            existing.username = self.cleaned_data['username']
-            existing.first_name = self.cleaned_data['first_name']
-            existing.last_name = self.cleaned_data['last_name']
-            existing.phone_number = self.cleaned_data.get('phone_number', '')
-            existing.address = self.cleaned_data.get('address', '')
-            existing.set_password(self.cleaned_data['password'])
-            existing.account_status = 'INACTIVE'
-            if commit:
-                existing.save()
-            return existing
-
         user = super().save(commit=False)
-        user.email = email
+        user.email = self.cleaned_data['email'].strip().lower()
         user.set_password(self.cleaned_data['password'])
         user.role = 'CITIZEN'
-        user.is_verified = False
-        user.account_status = 'INACTIVE'
+        user.is_verified = True
+        user.account_status = 'ACTIVE'
+        user.is_active = True
         if commit:
             user.save()
         return user
@@ -106,15 +92,6 @@ class UserProfileUpdateForm(forms.ModelForm):
         }
 
 
-class OTPVerificationForm(forms.Form):
-    otp_code = forms.CharField(
-        max_length=6,
-        min_length=6,
-        widget=forms.TextInput(attrs={'placeholder': '6-digit OTP', 'class': 'form-control text-center fs-4 letter-spacing'}),
-        label="Enter OTP"
-    )
-
-
 class ForgotPasswordForm(forms.Form):
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={'placeholder': 'Enter your registered email address', 'class': 'form-control'}),
@@ -122,12 +99,7 @@ class ForgotPasswordForm(forms.Form):
     )
 
 
-class ResetPasswordForm(forms.Form):
-    otp_code = forms.CharField(
-        max_length=6,
-        widget=forms.TextInput(attrs={'placeholder': '6-digit OTP received', 'class': 'form-control'}),
-        label="Verification OTP"
-    )
+class SetNewPasswordForm(forms.Form):
     new_password = forms.CharField(
         widget=forms.PasswordInput(attrs={'placeholder': 'Enter new password', 'class': 'form-control'}),
         label="New Password"

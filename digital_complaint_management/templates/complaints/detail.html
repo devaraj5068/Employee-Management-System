@@ -215,19 +215,29 @@
     </div>
   </div>
 
-  <!-- Row 2: Geographic Location Card with Leaflet Map -->
+  <!-- Row 2: Geographic Location Card with Google Maps -->
   <div class="row g-4 mb-4">
     <div class="col-12">
       <div class="map-card">
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
           <h5 class="fw-bold text-dark mb-0">
             <i class="bi bi-geo-alt-fill me-2 text-danger"></i> Geographic Location & Incident Pin
           </h5>
-          {% if complaint.latitude and complaint.longitude %}
-            <span class="badge bg-light text-secondary border font-monospace">
-              Lat: {{ complaint.latitude }}, Lng: {{ complaint.longitude }}
-            </span>
-          {% endif %}
+          <div class="d-flex align-items-center gap-2">
+            {% if complaint.latitude and complaint.longitude %}
+              <span class="badge bg-light text-secondary border font-monospace">
+                Lat: {{ complaint.latitude }}, Lng: {{ complaint.longitude }}
+              </span>
+              <a href="https://www.google.com/maps/search/?api=1&query={{ complaint.latitude }},{{ complaint.longitude }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Open in Google Maps">
+                <i class="bi bi-box-arrow-up-right me-1"></i> Google Maps
+              </a>
+            {% endif %}
+            {% if can_manage %}
+              <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#locationCorrectionModal">
+                <i class="bi bi-geo-alt me-1"></i> {% if complaint.latitude and complaint.longitude %}Correct Pin Location{% else %}Set Location Pin{% endif %}
+              </button>
+            {% endif %}
+          </div>
         </div>
 
         <div class="mb-3">
@@ -238,7 +248,22 @@
           </div>
         </div>
 
-        <!-- Leaflet Map Container -->
+        {% if not GOOGLE_MAPS_API_KEY %}
+        <div class="alert alert-warning border-warning d-flex align-items-start gap-3 my-2 rounded-3" role="alert">
+          <i class="bi bi-exclamation-triangle-fill fs-4 text-warning flex-shrink-0"></i>
+          <div>
+            <h6 class="fw-bold mb-1">Google Maps API Key Not Set</h6>
+            <p class="small mb-0">Configure <code>GOOGLE_MAPS_API_KEY=YOUR_KEY</code> in your <code>.env</code> file to enable live Google street/satellite mapping view.</p>
+          </div>
+        </div>
+        {% endif %}
+
+        <div id="mapAuthErrorNotice" class="alert alert-danger border-danger d-none my-2 rounded-3" role="alert">
+          <i class="bi bi-shield-x fs-4 text-danger me-2"></i>
+          <strong>Google Maps Authorization Error:</strong> Key authentication failed.
+        </div>
+
+        <!-- Google Map Container -->
         {% if complaint.latitude and complaint.longitude %}
           <div id="complaint-map"></div>
         {% else %}
@@ -246,6 +271,11 @@
             <i class="bi bi-geo-slash fs-2 d-block mb-2 text-secondary"></i>
             <strong>Location information is not available for this complaint.</strong>
             <p class="small mb-0">GPS coordinates were not attached when this grievance was submitted.</p>
+            {% if can_manage %}
+              <button type="button" class="btn btn-primary btn-sm mt-3" data-bs-toggle="modal" data-bs-target="#locationCorrectionModal">
+                <i class="bi bi-pin-map me-1"></i> Pin Incident Spot on Map
+              </button>
+            {% endif %}
           </div>
         {% endif %}
       </div>
@@ -601,43 +631,298 @@
   </div>
 {% endif %}
 
+{% if can_manage %}
+  <!-- Modal: Admin Location Pin Correction -->
+  <div class="modal fade" id="locationCorrectionModal" tabindex="-1" aria-labelledby="locationCorrectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <form method="post" action="{% url 'complaints:location_update' complaint.complaint_id %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold" id="locationCorrectionModalLabel">
+              <i class="bi bi-geo-alt-fill text-danger me-2"></i> Correct Incident Location Pin
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted mb-3">
+              Search by landmark/address, or click and drag the pin on the map to set the exact incident coordinates.
+            </p>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Search Area / Landmark</label>
+              <div class="input-group">
+                <input type="text" id="modalMapSearchInput" class="form-control" placeholder="Search address, landmark, area (e.g. MG Road, Bengaluru)...">
+                <button class="btn btn-outline-primary" type="button" id="btnModalMapSearch">
+                  <i class="bi bi-search me-1"></i> Locate
+                </button>
+              </div>
+            </div>
+
+            <!-- Mini interactive map inside modal -->
+            <div id="admin-correction-map" style="height: 300px; width: 100%; border-radius: 10px; border: 1px solid #cbd5e1; margin-bottom: 1rem; background-color: #f8fafc;"></div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Incident Address / Landmark *</label>
+              {{ location_form.location_address }}
+            </div>
+
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Latitude *</label>
+                {{ location_form.latitude }}
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Longitude *</label>
+                {{ location_form.longitude }}
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm px-3 fw-semibold">Save Corrected Location</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
-{% if complaint.latitude and complaint.longitude %}
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-  const latitude = {{ complaint.latitude }};
-  const longitude = {{ complaint.longitude }};
+let detailMap = null;
+let detailMarker = null;
+let modalMap = null;
+let modalMarker = null;
+let modalGeocoder = null;
 
-  if (latitude && longitude && document.getElementById("complaint-map")) {
-    const map = L.map("complaint-map").setView([latitude, longitude], 15);
+const COMPLAINT_LAT = {% if complaint.latitude %}{{ complaint.latitude }}{% else %}null{% endif %};
+const COMPLAINT_LNG = {% if complaint.longitude %}{{ complaint.longitude }}{% else %}null{% endif %};
 
-    const tileUrl = "{{ MAP_TILE_URL|escapejs }}";
-    const tileAttr = "{{ MAP_TILE_ATTRIBUTION|escapejs }}";
+function initComplaintDetailMap() {
+  // 1. Initialize view map if coordinates exist
+  const mapElement = document.getElementById("complaint-map");
+  if (mapElement && COMPLAINT_LAT !== null && COMPLAINT_LNG !== null) {
+    const pos = { lat: parseFloat(COMPLAINT_LAT), lng: parseFloat(COMPLAINT_LNG) };
 
-    L.tileLayer(tileUrl, {
-      maxZoom: 19,
-      attribution: tileAttr
-    }).addTo(map);
+    detailMap = new google.maps.Map(mapElement, {
+      center: pos,
+      zoom: 15,
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: true,
+      zoomControl: true,
+    });
 
-    const popupContent = `
-      <div style="font-family: inherit; font-size: 13px; line-height: 1.45; min-width: 180px;">
-        <div style="font-weight: 700; color: #2563eb; margin-bottom: 2px;">{{ complaint.complaint_id }}</div>
-        <div style="font-weight: 600; margin-bottom: 6px; color: #0f172a;">{{ complaint.title|escapejs }}</div>
-        <div style="margin-bottom: 2px;"><strong>Category:</strong> {{ complaint.category.name|escapejs }}</div>
-        <div style="margin-bottom: 2px;"><strong>Priority:</strong> {{ complaint.get_priority_display|escapejs }}</div>
-        <div style="margin-bottom: 2px;"><strong>Status:</strong> {{ complaint.get_status_display|escapejs }}</div>
-        <div><strong>Location:</strong> {{ complaint.location_address|default:"Incident Location"|escapejs }}</div>
-      </div>
-    `;
+    const priorityColor = "{% if complaint.priority == 'CRITICAL' %}#dc3545{% elif complaint.priority == 'HIGH' %}#fd7e14{% elif complaint.priority == 'MEDIUM' %}#0dcaf0{% elif complaint.priority == 'LOW' %}#198754{% else %}#2563eb{% endif %}";
 
-    L.marker([latitude, longitude])
-      .addTo(map)
-      .bindPopup(popupContent)
-      .openPopup();
+    detailMarker = new google.maps.Marker({
+      position: pos,
+      map: detailMap,
+      icon: {
+        path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+        fillColor: priorityColor,
+        fillOpacity: 1,
+        strokeWeight: 1.5,
+        strokeColor: "#ffffff",
+        scale: 1.8,
+        anchor: new google.maps.Point(12, 22),
+      },
+      title: "{{ complaint.complaint_id }} - {{ complaint.title|escapejs }}"
+    });
+
+    const infoWindow = new google.maps.InfoWindow({
+      content: `
+        <div style="font-family: inherit; font-size: 13px; line-height: 1.45; min-width: 190px;">
+          <div style="font-weight: 700; color: #2563eb; margin-bottom: 2px;">{{ complaint.complaint_id }}</div>
+          <div style="font-weight: 600; margin-bottom: 6px; color: #0f172a;">{{ complaint.title|escapejs }}</div>
+          <div style="margin-bottom: 2px;"><strong>Category:</strong> {{ complaint.category.name|escapejs }}</div>
+          <div style="margin-bottom: 2px;"><strong>Priority:</strong> {{ complaint.get_priority_display|escapejs }}</div>
+          <div style="margin-bottom: 2px;"><strong>Status:</strong> {{ complaint.get_status_display|escapejs }}</div>
+          <div><strong>Location:</strong> {{ complaint.location_address|default:"Incident Location"|escapejs }}</div>
+        </div>
+      `
+    });
+
+    detailMarker.addListener("click", function() {
+      infoWindow.open(detailMap, detailMarker);
+    });
+    infoWindow.open(detailMap, detailMarker);
   }
-});
+
+  // 2. Setup Location Correction Modal Map
+  setupCorrectionModalMap();
+}
+
+function setupCorrectionModalMap() {
+  const modalElem = document.getElementById('locationCorrectionModal');
+  if (!modalElem) return;
+
+  const modalMapElem = document.getElementById('admin-correction-map');
+  const latInput = document.getElementById('id_admin_latitude');
+  const lngInput = document.getElementById('id_admin_longitude');
+  const addrInput = document.getElementById('id_admin_location_address');
+  const searchInput = document.getElementById('modalMapSearchInput');
+  const searchBtn = document.getElementById('btnModalMapSearch');
+
+  modalElem.addEventListener('shown.bs.modal', function() {
+    if (!window.google || !window.google.maps) return;
+
+    if (!modalGeocoder) {
+      modalGeocoder = new google.maps.Geocoder();
+    }
+
+    const curLat = parseFloat(latInput.value) || COMPLAINT_LAT || 12.9716;
+    const curLng = parseFloat(lngInput.value) || COMPLAINT_LNG || 77.5946;
+    const curPos = { lat: curLat, lng: curLng };
+
+    if (!modalMap) {
+      modalMap = new google.maps.Map(modalMapElem, {
+        center: curPos,
+        zoom: 15,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
+
+      modalMarker = new google.maps.Marker({
+        position: curPos,
+        map: modalMap,
+        draggable: true,
+        animation: google.maps.Animation.DROP,
+        title: "Drag to correct incident pin"
+      });
+
+      modalMarker.addListener('dragend', function() {
+        const pos = modalMarker.getPosition();
+        updateModalCoords(pos.lat(), pos.lng(), true);
+      });
+
+      modalMap.addListener('click', function(e) {
+        modalMarker.setPosition(e.latLng);
+        updateModalCoords(e.latLng.lat(), e.latLng.lng(), true);
+      });
+    } else {
+      google.maps.event.trigger(modalMap, 'resize');
+      modalMap.setCenter(curPos);
+      modalMarker.setPosition(curPos);
+    }
+  });
+
+  function setModalAddress(addr) {
+    if (addrInput && addr) {
+      addrInput.value = addr;
+      addrInput.dispatchEvent(new Event("input", { bubbles: true }));
+      addrInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
+
+  function updateModalCoords(lat, lng, reverseGeocode) {
+    if (latInput) latInput.value = Number(lat).toFixed(7);
+    if (lngInput) lngInput.value = Number(lng).toFixed(7);
+
+    if (reverseGeocode) {
+      if (modalGeocoder) {
+        modalGeocoder.geocode({ location: { lat: Number(lat), lng: Number(lng) } }, function(results, status) {
+          if (status === 'OK' && results && results.length > 0) {
+            setModalAddress(results[0].formatted_address);
+          } else {
+            // Fallback reverse geocode lookup
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+              .then(res => res.json())
+              .then(data => {
+                if (data && data.display_name) {
+                  setModalAddress(data.display_name);
+                }
+              })
+              .catch(() => {});
+          }
+        });
+      } else {
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.display_name) {
+              setModalAddress(data.display_name);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }
+
+  function doModalSearch() {
+    const q = (searchInput.value || '').trim();
+    if (!q) return;
+
+    function applySearchResult(locLat, locLng, formattedAddr) {
+      modalMap.setCenter({ lat: locLat, lng: locLng });
+      modalMap.setZoom(16);
+      modalMarker.setPosition({ lat: locLat, lng: locLng });
+      updateModalCoords(locLat, locLng, false);
+      setModalAddress(formattedAddr);
+    }
+
+    if (modalGeocoder) {
+      modalGeocoder.geocode({ address: q }, function(results, status) {
+        if (status === 'OK' && results && results.length > 0) {
+          const loc = results[0].geometry.location;
+          applySearchResult(loc.lat(), loc.lng(), results[0].formatted_address || q);
+        } else {
+          // Fallback Nominatim search
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`)
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.length > 0) {
+                applySearchResult(parseFloat(data[0].lat), parseFloat(data[0].lon), data[0].display_name);
+              } else {
+                alert("Location search returned no results.");
+              }
+            })
+            .catch(() => {
+              alert("Location search returned no results.");
+            });
+        }
+      });
+    } else {
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            applySearchResult(parseFloat(data[0].lat), parseFloat(data[0].lon), data[0].display_name);
+          } else {
+            alert("Location search returned no results.");
+          }
+        })
+        .catch(() => {
+          alert("Location search returned no results.");
+        });
+    }
+  }
+
+  if (searchBtn) searchBtn.addEventListener('click', doModalSearch);
+  if (searchInput) {
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doModalSearch();
+      }
+    });
+  }
+}
+
+// Global Auth Failure hook
+window.gm_authFailure = function() {
+  const errorNotice = document.getElementById('mapAuthErrorNotice');
+  if (errorNotice) {
+    errorNotice.classList.remove('d-none');
+  }
+};
 </script>
+
+{% if GOOGLE_MAPS_API_KEY %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places,geometry&callback=initComplaintDetailMap" async defer></script>
 {% endif %}
 {% endblock %}

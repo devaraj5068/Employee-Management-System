@@ -6,4 +6,5 @@ app_name = 'location'
 urlpatterns = [
     path('map/', views.complaint_map_view, name='map_view'),
     path('api/markers/', views.complaint_markers_api, name='markers_api'),
+    path('api/complaints/map/', views.complaint_markers_api, name='complaints_map_api'),
 ]

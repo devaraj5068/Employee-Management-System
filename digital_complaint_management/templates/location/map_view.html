@@ -1,38 +1,158 @@
 {% extends 'base.html' %}
 
-{% block title %}Geospatial Complaints Map | {{ PLATFORM_NAME }}{% endblock %}
+{% block title %}City-Wide Complaint Map | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  #map-fullscreen {
+    height: calc(100vh - 220px);
+    min-height: 560px;
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    overflow: hidden;
+    position: relative;
+    background-color: #f8fafc;
+  }
+  .map-filter-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  .map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+  }
+  .legend-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .gm-info-window-custom {
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+    max-width: 280px;
+    padding: 4px;
+  }
+  .spin {
+    animation: spin 1s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-lg-4 py-3">
 
+  <!-- Header & Legend Bar -->
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
       <h3 class="fw-bold tracking-tight text-primary mb-1">
-        <i class="bi bi-map-fill me-2"></i> City-Wide Geospatial Complaint Map
+        <i class="bi bi-geo-alt-fill me-2"></i> City-Wide Geospatial Complaint Map
       </h3>
-      <p class="text-muted small mb-0">Interactive Leaflet GIS map visualizing reported civic issues and locations.</p>
+      <p class="text-muted small mb-0">Live Google Maps GIS interface displaying citizen grievances and ground operations.</p>
     </div>
-    <div class="d-flex gap-2">
-      <!-- Filter Dropdowns -->
-      <select id="mapFilterPriority" class="form-select form-select-sm" style="width: 140px;">
-        <option value="">All Priorities</option>
-        <option value="CRITICAL">Critical</option>
-        <option value="HIGH">High</option>
-        <option value="MEDIUM">Medium</option>
-        <option value="LOW">Low</option>
-      </select>
-      <select id="mapFilterStatus" class="form-select form-select-sm" style="width: 140px;">
-        <option value="">All Statuses</option>
-        <option value="SUBMITTED">Submitted</option>
-        <option value="IN_PROGRESS">In Progress</option>
-        <option value="RESOLVED">Resolved</option>
-      </select>
-      <button type="button" class="btn btn-primary btn-sm" id="btnRefreshMarkers">
-        <i class="bi bi-arrow-repeat me-1"></i> Refresh Map
-      </button>
+
+    <!-- Priority Color Legend -->
+    <div class="map-legend shadow-sm">
+      <span class="fw-semibold text-muted small me-1">Priority Legend:</span>
+      <span><span class="legend-dot me-1" style="background-color: #dc3545;"></span>Critical</span>
+      <span><span class="legend-dot me-1" style="background-color: #fd7e14;"></span>High</span>
+      <span><span class="legend-dot me-1" style="background-color: #0dcaf0;"></span>Medium</span>
+      <span><span class="legend-dot me-1" style="background-color: #198754;"></span>Low</span>
+      <span class="badge bg-primary ms-2" id="markersCountBadge">0 Markers</span>
     </div>
   </div>
 
+  <!-- Interactive Filters Bar -->
+  <div class="map-filter-card mb-3">
+    <div class="row g-2 align-items-center">
+      <!-- Search Input -->
+      <div class="col-lg-3 col-md-6 col-12">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+          <input type="text" id="mapFilterSearch" class="form-control border-start-0" placeholder="Search title, ID, address..." autocomplete="off">
+        </div>
+      </div>
+
+      <!-- Priority Filter -->
+      <div class="col-lg-2 col-md-3 col-6">
+        <select id="mapFilterPriority" class="form-select form-select-sm">
+          <option value="">All Priorities</option>
+          {% for code, label in priority_choices %}
+            <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="col-lg-2 col-md-3 col-6">
+        <select id="mapFilterStatus" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          {% for code, label in status_choices %}
+            <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="col-lg-2 col-md-6 col-6">
+        <select id="mapFilterCategory" class="form-select form-select-sm">
+          <option value="">All Categories</option>
+          {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Department Filter -->
+      <div class="col-lg-2 col-md-6 col-6">
+        <select id="mapFilterDepartment" class="form-select form-select-sm">
+          <option value="">All Departments</option>
+          {% for dept in departments %}
+            <option value="{{ dept.id }}">{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Actions -->
+      <div class="col-lg-1 col-md-12 col-12 text-end">
+        <button type="button" class="btn btn-primary btn-sm w-100" id="btnRefreshMarkers" title="Refresh Map Markers">
+          <i class="bi bi-arrow-repeat me-1"></i> Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {% if not GOOGLE_MAPS_API_KEY %}
+  <div class="alert alert-warning border-warning d-flex align-items-start gap-3 my-2 rounded-3" role="alert">
+    <i class="bi bi-exclamation-triangle-fill fs-4 text-warning flex-shrink-0"></i>
+    <div>
+      <h6 class="fw-bold mb-1">Google Maps API Key Not Configured</h6>
+      <p class="small mb-0">To view live interactive Google satellite/street maps and colored complaint pins, configure <code>GOOGLE_MAPS_API_KEY=YOUR_KEY</code> in your <code>.env</code> file.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <div id="mapAuthErrorNotice" class="alert alert-danger border-danger d-none my-2 rounded-3" role="alert">
+    <i class="bi bi-shield-x fs-4 text-danger me-2"></i>
+    <strong>Google Maps Authorization Error:</strong> The provided Google Maps API key failed authentication. Please verify the key and enabled APIs in Google Cloud Console.
+  </div>
+
+  <!-- Fullscreen Map Canvas -->
   <div class="card border-0 shadow-sm rounded-4 p-2 bg-white">
     <div id="map-fullscreen"></div>
   </div>
@@ -42,80 +162,191 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-  const map = L.map('map-fullscreen').setView([12.9716, 77.5946], 12);
+let cityMap = null;
+let activeMarkers = [];
+let activeInfoWindow = null;
 
-  const tileUrl = "{{ MAP_TILE_URL|escapejs }}";
-  const tileAttr = "{{ MAP_TILE_ATTRIBUTION|escapejs }}";
-  L.tileLayer(tileUrl, {
-    maxZoom: 19,
-    attribution: tileAttr
-  }).addTo(map);
+const DEFAULT_CENTER = { lat: 12.9716, lng: 77.5946 };
 
-  let markersLayer = L.layerGroup().addTo(map);
+function getMarkerColor(priority) {
+  switch (priority) {
+    case 'CRITICAL': return '#dc3545';
+    case 'HIGH': return '#fd7e14';
+    case 'MEDIUM': return '#0dcaf0';
+    case 'LOW': return '#198754';
+    default: return '#2563eb';
+  }
+}
 
-  function getMarkerColor(priority) {
-    switch(priority) {
-      case 'CRITICAL': return '#dc3545';
-      case 'HIGH': return '#ffc107';
-      case 'MEDIUM': return '#0dcaf0';
-      case 'LOW': return '#198754';
-      default: return '#0d6efd';
-    }
+function getMarkerIcon(priority) {
+  const color = getMarkerColor(priority);
+  return {
+    path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+    fillColor: color,
+    fillOpacity: 1,
+    strokeWeight: 1.5,
+    strokeColor: "#ffffff",
+    scale: 1.6,
+    anchor: new google.maps.Point(12, 22),
+  };
+}
+
+function initCityWideMap() {
+  const mapElement = document.getElementById('map-fullscreen');
+  if (!mapElement) return;
+
+  cityMap = new google.maps.Map(mapElement, {
+    center: DEFAULT_CENTER,
+    zoom: 12,
+    mapTypeControl: true,
+    streetViewControl: false,
+    fullscreenControl: true,
+    zoomControl: true,
+  });
+
+  activeInfoWindow = new google.maps.InfoWindow();
+
+  // Initial load
+  loadMapMarkers();
+
+  // Attach dynamic filter listeners
+  document.getElementById('mapFilterPriority').addEventListener('change', loadMapMarkers);
+  document.getElementById('mapFilterStatus').addEventListener('change', loadMapMarkers);
+  document.getElementById('mapFilterCategory').addEventListener('change', loadMapMarkers);
+  document.getElementById('mapFilterDepartment').addEventListener('change', loadMapMarkers);
+
+  const searchInput = document.getElementById('mapFilterSearch');
+  if (searchInput) {
+    let debounceTimer = null;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(loadMapMarkers, 400);
+    });
   }
 
-  function loadMarkers() {
-    const priority = document.getElementById('mapFilterPriority').value;
-    const status = document.getElementById('mapFilterStatus').value;
+  const refreshBtn = document.getElementById('btnRefreshMarkers');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadMapMarkers);
+  }
+}
 
-    let url = `/location/api/markers/?`;
-    if (priority) url += `priority=${priority}&`;
-    if (status) url += `status=${status}&`;
+function clearMarkers() {
+  activeMarkers.forEach(m => m.setMap(null));
+  activeMarkers = [];
+}
 
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        markersLayer.clearLayers();
-        const markers = data.markers;
+function loadMapMarkers() {
+  if (!cityMap) return;
 
-        if (markers.length > 0) {
-          const group = [];
-          markers.forEach(m => {
-            const circle = L.circleMarker([m.lat, m.lng], {
-              radius: m.priority === 'CRITICAL' ? 12 : 9,
-              fillColor: getMarkerColor(m.priority),
-              color: '#ffffff',
-              weight: 2,
-              opacity: 1,
-              fillOpacity: 0.85
-            });
+  const priority = document.getElementById('mapFilterPriority').value;
+  const status = document.getElementById('mapFilterStatus').value;
+  const category = document.getElementById('mapFilterCategory').value;
+  const department = document.getElementById('mapFilterDepartment').value;
+  const search = document.getElementById('mapFilterSearch').value;
 
-            const popupContent = `
-              <div style="min-width: 180px;">
-                <span class="badge" style="background-color: ${getMarkerColor(m.priority)}">${m.priority}</span>
+  const refreshBtn = document.getElementById('btnRefreshMarkers');
+  if (refreshBtn) {
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Refreshing...';
+  }
+
+  const params = new URLSearchParams();
+  if (priority) params.append('priority', priority);
+  if (status) params.append('status', status);
+  if (category) params.append('category', category);
+  if (department) params.append('department', department);
+  if (search) params.append('q', search);
+
+  fetch(`/location/api/markers/?${params.toString()}`)
+    .then(res => res.json())
+    .then(data => {
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Refresh';
+      }
+
+      clearMarkers();
+      const markers = data.markers || [];
+
+      // Update badge
+      const badge = document.getElementById('markersCountBadge');
+      if (badge) {
+        badge.textContent = `${markers.length} Marker${markers.length === 1 ? '' : 's'}`;
+      }
+
+      if (markers.length === 0) {
+        return;
+      }
+
+      const bounds = new google.maps.LatLngBounds();
+
+      markers.forEach(m => {
+        const pos = { lat: m.lat, lng: m.lng };
+        const marker = new google.maps.Marker({
+          position: pos,
+          map: cityMap,
+          icon: getMarkerIcon(m.priority),
+          title: `[${m.id}] ${m.title}`,
+        });
+
+        marker.addListener('click', function() {
+          const priorityColor = getMarkerColor(m.priority);
+          const content = `
+            <div class="gm-info-window-custom">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="badge" style="background-color: ${priorityColor}; color: #fff;">${m.priority_display || m.priority}</span>
                 <span class="badge bg-secondary">${m.status}</span>
-                <h6 class="fw-bold mt-2 mb-1">${m.title}</h6>
-                <p class="small text-muted mb-1">${m.address}</p>
-                <div class="small mb-2 text-primary"><strong>ID:</strong> ${m.id}</div>
-                <a href="${m.url}" class="btn btn-sm btn-primary w-100 text-white" style="font-size: 0.75rem;">View Complaint</a>
               </div>
-            `;
-            circle.bindPopup(popupContent);
-            markersLayer.addLayer(circle);
-            group.push([m.lat, m.lng]);
-          });
+              <div class="fw-bold text-primary mb-1">${m.id}</div>
+              <h6 class="fw-bold mb-1" style="font-size: 0.95rem; color: #0f172a;">${escapeHtml(m.title)}</h6>
+              <div class="text-muted small mb-1"><i class="bi bi-folder2-open me-1"></i>${escapeHtml(m.category)} &bull; ${escapeHtml(m.department)}</div>
+              <div class="small mb-1 text-dark"><i class="bi bi-geo-alt me-1 text-danger"></i>${escapeHtml(m.address)}</div>
+              <div class="small text-muted mb-2"><i class="bi bi-calendar3 me-1"></i>Filed: ${m.date} &bull; Officer: ${escapeHtml(m.assigned_officer)}</div>
+              <a href="${m.url}" class="btn btn-sm btn-primary w-100 text-white shadow-sm" style="font-size: 0.78rem;">
+                <i class="bi bi-eye me-1"></i> View Complaint Details
+              </a>
+            </div>
+          `;
+          activeInfoWindow.setContent(content);
+          activeInfoWindow.open(cityMap, marker);
+        });
 
-          map.fitBounds(group, { padding: [40, 40] });
-        }
-      })
-      .catch(() => {});
+        activeMarkers.push(marker);
+        bounds.extend(pos);
+      });
+
+      if (markers.length === 1) {
+        cityMap.setCenter(bounds.getCenter());
+        cityMap.setZoom(15);
+      } else {
+        cityMap.fitBounds(bounds, 50);
+      }
+    })
+    .catch(() => {
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Refresh';
+      }
+    });
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Global Auth Failure hook
+window.gm_authFailure = function() {
+  const errorNotice = document.getElementById('mapAuthErrorNotice');
+  if (errorNotice) {
+    errorNotice.classList.remove('d-none');
   }
-
-  loadMarkers();
-
-  document.getElementById('btnRefreshMarkers').addEventListener('click', loadMarkers);
-  document.getElementById('mapFilterPriority').addEventListener('change', loadMarkers);
-  document.getElementById('mapFilterStatus').addEventListener('change', loadMarkers);
-});
+};
 </script>
+
+{% if GOOGLE_MAPS_API_KEY %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places,geometry&callback=initCityWideMap" async defer></script>
+{% endif %}
 {% endblock %}

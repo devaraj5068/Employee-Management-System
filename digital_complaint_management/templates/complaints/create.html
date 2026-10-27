@@ -2,6 +2,40 @@
 
 {% block title %}Register New Complaint | {{ PLATFORM_NAME }}{% endblock %}
 
+{% block extra_css %}
+<style>
+  #complaint-picker-map {
+    height: 420px;
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    overflow: hidden;
+    position: relative;
+    background-color: #f8fafc;
+  }
+  .map-search-container {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.65rem 0.75rem;
+  }
+  .coord-pill {
+    font-family: monospace;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.65rem;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #334155;
+  }
+  .spin {
+    animation: spin 1s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
   <div class="row justify-content-center">
@@ -65,24 +99,78 @@
 
             <!-- Location Details -->
             <div class="col-12 mt-4">
-              <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-                <h5 class="fw-bold text-dark mb-0">2. Incident Location & Map Pin</h5>
-                <button type="button" class="btn btn-outline-primary btn-sm" id="btnGeolocate">
-                  <i class="bi bi-crosshair me-1"></i> Use My Current Location
-                </button>
+              <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-2 gap-2">
+                <div>
+                  <h5 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-geo-alt-fill text-danger me-1"></i> 2. Incident Location & Map Pin
+                  </h5>
+                  <small class="text-muted">Pinpoint the precise geographic spot of the issue</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span id="geoAccuracyBadge" class="badge bg-light text-secondary border small d-none">
+                    <i class="bi bi-broadcast text-success me-1"></i> <span id="geoAccuracyText">Accuracy: ± 0m</span>
+                  </span>
+                  <button type="button" class="btn btn-outline-primary btn-sm" id="btnGeolocate">
+                    <i class="bi bi-crosshair me-1"></i> Use My Current Location
+                  </button>
+                </div>
               </div>
             </div>
 
             <div class="col-12">
-              <label class="form-label fw-semibold small">Address / Landmark / Street *</label>
+              <label class="form-label fw-semibold small" for="id_location_address">Address / Landmark / Street *</label>
               {{ form.location_address }}
+              {% if form.location_address.errors %}<div class="text-danger small mt-1">{{ form.location_address.errors.0 }}</div>{% endif %}
               {{ form.latitude }}
               {{ form.longitude }}
-              <div class="form-text small text-muted">Click or drag the marker on the map below to pinpoint the exact location.</div>
+
+              <!-- Real-time geocoding status and feedback notification -->
+              <div id="addressStatusNotice" class="small mt-1 d-none"></div>
+
+              <div class="d-flex flex-wrap justify-content-between align-items-center mt-1 gap-2">
+                <div class="form-text small text-muted">
+                  Click or drag the pin on the map, use "Current Location", or search by area/landmark below. Address auto-fills and can be manually edited.
+                </div>
+                <div>
+                  <span class="coord-pill" id="coordPillDisplay">
+                    <i class="bi bi-pin-map text-primary me-1"></i>
+                    <span id="coordsDisplay">Pin: Not selected yet</span>
+                  </span>
+                </div>
+              </div>
             </div>
 
+            <!-- Search location input & Map Container -->
             <div class="col-12">
+              <div class="map-search-container shadow-sm mb-2">
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                  <input type="text" id="mapSearchInput" class="form-control border-start-0" placeholder="Search area, landmark, street (e.g. MG Road, Indiranagar, Bengaluru)..." autocomplete="off">
+                  <button class="btn btn-primary" type="button" id="btnSearchLocation">
+                    <i class="bi bi-search me-1"></i> Find on Map
+                  </button>
+                </div>
+              </div>
+
+              {% if not GOOGLE_MAPS_API_KEY %}
+              <div class="alert alert-warning border-warning d-flex align-items-start gap-3 my-2 rounded-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill fs-4 text-warning flex-shrink-0"></i>
+                <div>
+                  <h6 class="fw-bold mb-1">Google Maps API Key Not Configured</h6>
+                  <p class="small mb-0">To view live interactive Google satellite/street maps and automatic reverse geocoding, please add <code>GOOGLE_MAPS_API_KEY=YOUR_KEY</code> in your <code>.env</code> file. Browser geolocation and manual address entry continue to function seamlessly.</p>
+                </div>
+              </div>
+              {% endif %}
+
+              <div id="mapAuthErrorNotice" class="alert alert-danger border-danger d-none my-2 rounded-3" role="alert">
+                <i class="bi bi-shield-x fs-4 text-danger me-2"></i>
+                <strong>Google Maps Authorization Notice:</strong> The provided Google Maps API Key failed authentication. Please verify the key and its allowed APIs (Maps JavaScript API & Geocoding API).
+              </div>
+
               <div id="complaint-picker-map"></div>
+              <div id="mapLocationNotice" class="text-danger small mt-2 d-none">
+                <i class="bi bi-exclamation-circle me-1"></i> Please select an incident location on the map before submitting.
+              </div>
             </div>
 
             <!-- Attachments -->
@@ -109,96 +197,455 @@
 
 {% block extra_js %}
 <script>
+// Global Map and Geocoding references
+let pickerMap = null;
+let pickerMarker = null;
+let pickerCircle = null;
+let pickerGeocoder = null;
+
+const DEFAULT_CENTER = { lat: 12.9716, lng: 77.5946 };
+
+function getGeocoder() {
+  if (!pickerGeocoder && window.google && window.google.maps) {
+    pickerGeocoder = new google.maps.Geocoder();
+  }
+  return pickerGeocoder;
+}
+
+function getAddressInputElement() {
+  return document.getElementById("id_location_address") || document.getElementById("address");
+}
+
+/**
+ * Updates the address field with the resolved address and fires input/change events.
+ */
+function setResolvedAddress(formattedAddress) {
+  const addressInput = getAddressInputElement();
+  if (addressInput && formattedAddress) {
+    addressInput.value = formattedAddress;
+    addressInput.dispatchEvent(new Event("input", { bubbles: true }));
+    addressInput.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  const statusNotice = document.getElementById("addressStatusNotice");
+  if (statusNotice) {
+    statusNotice.className = "small mt-1 text-success";
+    statusNotice.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Address resolved from pin location.';
+    setTimeout(() => {
+      if (statusNotice.classList.contains("text-success")) {
+        statusNotice.classList.add("d-none");
+      }
+    }, 4000);
+  }
+}
+
+/**
+ * Reusable reverse-geocoding function using Google Maps Geocoder with graceful fallback.
+ */
+function reverseGeocodeLocation(lat, lng) {
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return;
+  }
+
+  const statusNotice = document.getElementById("addressStatusNotice");
+  if (statusNotice) {
+    statusNotice.className = "small mt-1 text-primary";
+    statusNotice.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Finding address...';
+    statusNotice.classList.remove("d-none");
+  }
+
+  const geocoder = getGeocoder();
+
+  function fallbackLookup() {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.display_name) {
+          setResolvedAddress(data.display_name);
+        } else {
+          showFailureNotice("ZERO_RESULTS");
+        }
+      })
+      .catch(() => {
+        showFailureNotice("NETWORK_ERROR");
+      });
+  }
+
+  function showFailureNotice(status) {
+    console.warn("Reverse geocoding status for (" + latitude + ", " + longitude + "): " + status);
+    if (statusNotice) {
+      let msg = "Could not automatically resolve address. You can type or refine the address manually above.";
+      if (status === "ZERO_RESULTS") {
+        msg = "No named address found for this exact point. You can enter the address manually.";
+      } else if (status === "REQUEST_DENIED") {
+        msg = "Google Geocoding service is unavailable. You can enter or refine the address manually.";
+      } else if (status === "OVER_QUERY_LIMIT") {
+        msg = "Geocoding query limit reached temporarily. You can enter the address manually.";
+      }
+      statusNotice.className = "small mt-1 text-muted";
+      statusNotice.innerHTML = '<i class="bi bi-info-circle me-1 text-secondary"></i> ' + msg;
+      statusNotice.classList.remove("d-none");
+    }
+  }
+
+  if (geocoder) {
+    geocoder.geocode({ location: { lat: latitude, lng: longitude } }, function(results, status) {
+      if (status === "OK" && results && results.length > 0) {
+        setResolvedAddress(results[0].formatted_address);
+      } else {
+        console.warn("Google Maps Geocoder status:", status);
+        // Fallback to secondary geocoding to guarantee address resolution if Google quota/billing issues occur
+        if (status === "REQUEST_DENIED" || status === "OVER_QUERY_LIMIT" || status === "UNKNOWN_ERROR") {
+          fallbackLookup();
+        } else {
+          showFailureNotice(status);
+        }
+      }
+    });
+  } else {
+    fallbackLookup();
+  }
+}
+
+/**
+ * Synchronized central location updater.
+ * Updates coordinates, marker, map viewport, badge, and reverse-geocodes the address.
+ */
+function updateSelectedLocation(lat, lng, options) {
+  options = options || {};
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return;
+  }
+
+  const pos = { lat: latitude, lng: longitude };
+
+  // 1. Update form coordinates
+  const latInput = document.getElementById('id_latitude');
+  const lngInput = document.getElementById('id_longitude');
+  if (latInput) latInput.value = latitude.toFixed(7);
+  if (lngInput) lngInput.value = longitude.toFixed(7);
+
+  // 2. Update display pill
+  const coordsDisplay = document.getElementById('coordsDisplay');
+  if (coordsDisplay) {
+    coordsDisplay.textContent = `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`;
+  }
+
+  // 3. Clear validation notice if visible
+  const mapNotice = document.getElementById('mapLocationNotice');
+  if (mapNotice) mapNotice.classList.add('d-none');
+
+  // 4. Update or place Marker
+  if (pickerMap) {
+    if (!pickerMarker) {
+      pickerMarker = new google.maps.Marker({
+        position: pos,
+        map: pickerMap,
+        draggable: true,
+        animation: google.maps.Animation.DROP,
+        title: "Complaint Incident Location"
+      });
+
+      pickerMarker.addListener('dragend', function() {
+        const markerPos = pickerMarker.getPosition();
+        updateSelectedLocation(markerPos.lat(), markerPos.lng(), { center: false, reverseGeocode: true });
+      });
+    } else {
+      pickerMarker.setPosition(pos);
+    }
+
+    if (options.center !== false) {
+      pickerMap.setCenter(pos);
+      if (options.zoom) {
+        pickerMap.setZoom(options.zoom);
+      }
+    }
+  }
+
+  // 5. Populate address
+  if (options.address) {
+    setResolvedAddress(options.address);
+  } else if (options.reverseGeocode !== false) {
+    reverseGeocodeLocation(latitude, longitude);
+  }
+}
+
+/**
+ * Handles "Use My Current Location" via Browser Geolocation API.
+ */
+function handleCurrentLocation() {
+  const geolocateBtn = document.getElementById('btnGeolocate');
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by your browser.");
+    return;
+  }
+
+  if (geolocateBtn) {
+    geolocateBtn.disabled = true;
+    geolocateBtn.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Detecting GPS...';
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      if (geolocateBtn) {
+        geolocateBtn.disabled = false;
+        geolocateBtn.innerHTML = '<i class="bi bi-crosshair me-1"></i> Use My Current Location';
+      }
+
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const accuracy = position.coords.accuracy;
+
+      const accBadge = document.getElementById('geoAccuracyBadge');
+      const accText = document.getElementById('geoAccuracyText');
+      if (accBadge && accText) {
+        accBadge.classList.remove('d-none');
+        accText.textContent = `Accuracy: ± ${Math.round(accuracy)}m`;
+      }
+
+      if (pickerCircle) {
+        pickerCircle.setMap(null);
+      }
+      if (pickerMap) {
+        pickerCircle = new google.maps.Circle({
+          strokeColor: '#2563eb',
+          strokeOpacity: 0.7,
+          strokeWeight: 1,
+          fillColor: '#3b82f6',
+          fillOpacity: 0.15,
+          map: pickerMap,
+          center: { lat: lat, lng: lng },
+          radius: accuracy
+        });
+      }
+
+      updateSelectedLocation(lat, lng, { center: true, zoom: 16, reverseGeocode: true });
+    },
+    function(err) {
+      if (geolocateBtn) {
+        geolocateBtn.disabled = false;
+        geolocateBtn.innerHTML = '<i class="bi bi-crosshair me-1"></i> Use My Current Location';
+      }
+      let msg = "Could not obtain current location.";
+      if (err.code === 1) msg = "Location access was denied. Please allow location permissions in your browser or select the pin manually on the map.";
+      else if (err.code === 2) msg = "Position is unavailable. Please drop the pin manually on the map.";
+      else if (err.code === 3) msg = "Location request timed out. Please try again or drop the pin manually.";
+      alert(msg);
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+  );
+}
+
+/**
+ * Handles Find on Map location search.
+ */
+function performLocationSearch() {
+  const searchInput = document.getElementById('mapSearchInput');
+  const query = (searchInput && searchInput.value || '').trim();
+  if (!query) return;
+
+  const searchBtn = document.getElementById('btnSearchLocation');
+  if (searchBtn) {
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Searching...';
+  }
+
+  function handleSearchResult(lat, lng, address) {
+    if (searchBtn) {
+      searchBtn.disabled = false;
+      searchBtn.innerHTML = '<i class="bi bi-search me-1"></i> Find on Map';
+    }
+    updateSelectedLocation(lat, lng, { center: true, zoom: 16, address: address });
+  }
+
+  function fallbackSearch() {
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lon = parseFloat(data[0].lon);
+          handleSearchResult(lat, lon, data[0].display_name);
+        } else {
+          if (searchBtn) {
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<i class="bi bi-search me-1"></i> Find on Map';
+          }
+          alert("Location not found on map. Please try a different area, landmark, or city name.");
+        }
+      })
+      .catch(() => {
+        if (searchBtn) {
+          searchBtn.disabled = false;
+          searchBtn.innerHTML = '<i class="bi bi-search me-1"></i> Find on Map';
+        }
+        alert("Location not found on map. Please try a different area, landmark, or city name.");
+      });
+  }
+
+  const geocoder = getGeocoder();
+  if (geocoder) {
+    geocoder.geocode({ address: query }, function(results, status) {
+      if (status === 'OK' && results && results.length > 0) {
+        const loc = results[0].geometry.location;
+        const resolvedAddress = results[0].formatted_address || query;
+        handleSearchResult(loc.lat(), loc.lng(), resolvedAddress);
+      } else {
+        console.warn("Google Geocoding search status: " + status + ". Trying fallback lookup.");
+        fallbackSearch();
+      }
+    });
+  } else {
+    fallbackSearch();
+  }
+}
+
+// Category -> Subcategory dynamic dropdown AJAX & Form Handlers
 document.addEventListener("DOMContentLoaded", function() {
-  // Category -> Subcategory dynamic dropdown AJAX
   const categorySelect = document.getElementById('id_category');
   const subcategorySelect = document.getElementById('id_subcategory');
   const loadingIndicator = document.getElementById('subcat-loading');
 
-  categorySelect.addEventListener('change', function() {
-    const catId = this.value;
-    if (!catId) {
-      subcategorySelect.innerHTML = '<option value="">---------</option>';
-      return;
-    }
+  if (categorySelect && subcategorySelect) {
+    categorySelect.addEventListener('change', function() {
+      const catId = this.value;
+      if (!catId) {
+        subcategorySelect.innerHTML = '<option value="">---------</option>';
+        return;
+      }
 
-    loadingIndicator.style.display = 'block';
-    fetch(`/complaints/ajax/subcategories/?category_id=${catId}`)
-      .then(res => res.json())
-      .then(data => {
-        loadingIndicator.style.display = 'none';
-        let options = '<option value="">Select Subcategory</option>';
-        data.forEach(item => {
-          options += `<option value="${item.id}">${item.name}</option>`;
+      if (loadingIndicator) loadingIndicator.style.display = 'block';
+      fetch(`/complaints/ajax/subcategories/?category_id=${catId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (loadingIndicator) loadingIndicator.style.display = 'none';
+          let options = '<option value="">Select Subcategory</option>';
+          data.forEach(item => {
+            options += `<option value="${item.id}">${item.name}</option>`;
+          });
+          subcategorySelect.innerHTML = options;
+        })
+        .catch(() => {
+          if (loadingIndicator) loadingIndicator.style.display = 'none';
         });
-        subcategorySelect.innerHTML = options;
-      })
-      .catch(() => {
-        loadingIndicator.style.display = 'none';
-      });
-  });
-
-  // Leaflet Map Initialization
-  const defaultLat = 12.9716;
-  const defaultLng = 77.5946;
-
-  const map = L.map('complaint-picker-map').setView([defaultLat, defaultLng], 13);
-  const tileUrl = "{{ MAP_TILE_URL|escapejs }}";
-  const tileAttr = "{{ MAP_TILE_ATTRIBUTION|escapejs }}";
-  L.tileLayer(tileUrl, {
-    maxZoom: 19,
-    attribution: tileAttr
-  }).addTo(map);
-
-  let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
-
-  function updateCoords(lat, lng) {
-    document.getElementById('id_latitude').value = lat.toFixed(7);
-    document.getElementById('id_longitude').value = lng.toFixed(7);
-
-    // Reverse geocode via Nominatim
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.display_name) {
-          const addrField = document.getElementById('id_location_address');
-          if (!addrField.value || addrField.value.trim() === "") {
-            addrField.value = data.display_name;
-          }
-        }
-      })
-      .catch(() => {});
+    });
   }
 
-  // Set initial
-  updateCoords(defaultLat, defaultLng);
-
-  marker.on('dragend', function(e) {
-    const pos = marker.getLatLng();
-    updateCoords(pos.lat, pos.lng);
-  });
-
-  map.on('click', function(e) {
-    marker.setLatLng(e.latlng);
-    updateCoords(e.latlng.lat, e.latlng.lng);
-  });
-
-  // Geolocation button
-  document.getElementById('btnGeolocate').addEventListener('click', function() {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(function(pos) {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        map.setView([lat, lng], 16);
-        marker.setLatLng([lat, lng]);
-        updateCoords(lat, lng);
-      }, function() {
-        alert("Could not access your location. Please drop the pin on the map manually.");
-      });
-    } else {
-      alert("Geolocation is not supported by your browser.");
+  // Pre-fill coordinate display if coordinates exist
+  const existingLat = parseFloat(document.getElementById('id_latitude').value);
+  const existingLng = parseFloat(document.getElementById('id_longitude').value);
+  if (!isNaN(existingLat) && !isNaN(existingLng) && (existingLat !== 0 || existingLng !== 0)) {
+    const coordsDisplay = document.getElementById('coordsDisplay');
+    if (coordsDisplay) {
+      coordsDisplay.textContent = `Lat: ${existingLat.toFixed(6)}, Lng: ${existingLng.toFixed(6)}`;
     }
-  });
+  }
+
+  // Connect Use Current Location button
+  const geolocateBtn = document.getElementById('btnGeolocate');
+  if (geolocateBtn) {
+    geolocateBtn.addEventListener('click', handleCurrentLocation);
+  }
+
+  // Connect Find on Map button & Enter key
+  const searchBtn = document.getElementById('btnSearchLocation');
+  const searchInput = document.getElementById('mapSearchInput');
+  if (searchBtn) searchBtn.addEventListener('click', performLocationSearch);
+  if (searchInput) {
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        performLocationSearch();
+      }
+    });
+  }
+
+  // Form submission coordinate validation
+  const complaintForm = document.getElementById('complaintForm');
+  if (complaintForm) {
+    complaintForm.addEventListener('submit', function(e) {
+      const latVal = document.getElementById('id_latitude').value;
+      const lngVal = document.getElementById('id_longitude').value;
+      const latNum = parseFloat(latVal);
+      const lngNum = parseFloat(lngVal);
+
+      if (!latVal || !lngVal || isNaN(latNum) || isNaN(lngNum) || !(-90 <= latNum && latNum <= 90) || !(-180 <= lngNum && lngNum <= 180)) {
+        e.preventDefault();
+        const mapNotice = document.getElementById('mapLocationNotice');
+        if (mapNotice) mapNotice.classList.remove('d-none');
+        const mapElem = document.getElementById('complaint-picker-map');
+        if (mapElem) mapElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        alert("Please select the incident location pin on the map before submitting.");
+      }
+    });
+  }
 });
+
+// Google Maps Interactive Initialization Callback
+function initComplaintPickerMap() {
+  const mapElement = document.getElementById('complaint-picker-map');
+  if (!mapElement) return;
+
+  const latInput = document.getElementById('id_latitude');
+  const lngInput = document.getElementById('id_longitude');
+
+  const initialLat = parseFloat(latInput ? latInput.value : '');
+  const initialLng = parseFloat(lngInput ? lngInput.value : '');
+  const hasExistingCoords = !isNaN(initialLat) && !isNaN(initialLng) && (initialLat !== 0 || initialLng !== 0);
+
+  const startCenter = hasExistingCoords ? { lat: initialLat, lng: initialLng } : DEFAULT_CENTER;
+  const startZoom = hasExistingCoords ? 16 : 12;
+
+  pickerMap = new google.maps.Map(mapElement, {
+    center: startCenter,
+    zoom: startZoom,
+    mapTypeControl: true,
+    streetViewControl: false,
+    fullscreenControl: true,
+    zoomControl: true,
+  });
+
+  // If existing coords present on load, position marker without overwriting existing address
+  if (hasExistingCoords) {
+    updateSelectedLocation(initialLat, initialLng, { center: false, reverseGeocode: false });
+  }
+
+  // Click on map to place/move pin and auto-fill address
+  pickerMap.addListener('click', function(e) {
+    updateSelectedLocation(e.latLng.lat(), e.latLng.lng(), { center: false, reverseGeocode: true });
+  });
+}
+
+// Google Maps Auth Failure hook
+window.gm_authFailure = function() {
+  const errorNotice = document.getElementById('mapAuthErrorNotice');
+  if (errorNotice) {
+    errorNotice.classList.remove('d-none');
+  }
+};
 </script>
+
+{% if GOOGLE_MAPS_API_KEY %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places,geometry&callback=initComplaintPickerMap" async defer></script>
+{% endif %}
 {% endblock %}

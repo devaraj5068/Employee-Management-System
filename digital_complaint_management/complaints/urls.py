@@ -16,6 +16,7 @@ urlpatterns = [
     path('<str:complaint_id>/status/', views.complaint_status_update, name='status_update'),
     path('<str:complaint_id>/assign/', views.complaint_assign, name='assign'),
     path('<str:complaint_id>/priority/', views.complaint_priority_update, name='priority_update'),
+    path('<str:complaint_id>/location/update/', views.complaint_location_update, name='location_update'),
 
     # Category admin management
     path('admin/categories/', views.category_list, name='category_list'),

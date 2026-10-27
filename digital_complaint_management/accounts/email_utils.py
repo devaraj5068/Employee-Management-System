@@ -25,31 +25,35 @@ def is_email_configured():
     return len(missing) == 0, missing
 
 
-def send_otp_email_generic(recipient_email, recipient_name, otp, subject, template_base):
+def send_password_reset_link_email(user, reset_url):
     """
-    Core helper to send HTML + Plain text OTP email via Django SMTP email backend.
-    template_base is the base template name in templates/emails/.
+    Sends secure password reset link email via Django SMTP email backend.
     Returns (success: bool, user_message: str)
     """
-    if not recipient_email:
-        return False, "Unable to send verification email. Please try again."
+    if not user or not user.email:
+        return False, "User does not have a registered email address."
 
-    recipient_email = recipient_email.strip().lower()
-    recipient_name = recipient_name or recipient_email.split('@')[0]
+    configured, missing = is_email_configured()
+    if not configured:
+        logger.warning("SMTP email delivery is not configured. Missing keys: %s", missing)
+        return False, "Email delivery service is currently not configured. Please contact the system administrator to reset your password."
+
+    recipient_email = user.email.strip().lower()
+    recipient_name = user.get_full_name() or user.username
+    subject = "ResolveNow – Password Reset Request"
 
     context = {
-        'citizen_name': recipient_name,
         'user_name': recipient_name,
-        'otp': otp,
+        'reset_url': reset_url,
         'PLATFORM_NAME': 'ResolveNow',
     }
 
     try:
-        text_content = render_to_string(f'emails/{template_base}.txt', context)
-        html_content = render_to_string(f'emails/{template_base}.html', context)
+        text_content = render_to_string('emails/password_reset_email.txt', context)
+        html_content = render_to_string('emails/password_reset_email.html', context)
     except Exception as exc:
-        logger.exception("Failed to render email template emails/%s: %s", template_base, exc)
-        return False, "Unable to send verification email. Please try again."
+        logger.exception("Failed to render password reset email template: %s", exc)
+        return False, "Unable to generate password reset email. Please try again."
 
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', settings.EMAIL_HOST_USER)
 
@@ -62,44 +66,15 @@ def send_otp_email_generic(recipient_email, recipient_name, otp, subject, templa
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
-        logger.info("Successfully dispatched %s email to %s", template_base, recipient_email)
-        return True, "Verification code sent successfully to your email."
+        logger.info("Successfully dispatched password reset link to %s", recipient_email)
+        return True, "A password reset link has been dispatched to your email address."
 
     except (SMTPAuthenticationError, SMTPConnectError) as exc:
         logger.error("SMTP Authentication/Connection Error for %s: %s", recipient_email, exc)
-        return False, "Unable to send verification email. Please try again."
+        return False, "Email delivery server authentication failed. Please contact your system administrator."
     except (SMTPException, ConnectionError, TimeoutError, OSError) as exc:
         logger.error("SMTP Exception when sending to %s: %s", recipient_email, exc)
-        return False, "Unable to send verification email. Please try again."
+        return False, "Unable to dispatch password reset email at this time. Please contact support or try again later."
     except Exception as exc:
         logger.exception("Unexpected error sending email to %s: %s", recipient_email, exc)
-        return False, "Unable to send verification email. Please try again."
-
-
-def send_registration_otp_email(recipient_email, recipient_name, otp):
-    """
-    Sends Citizen Registration Verification OTP email via Gmail SMTP.
-    Subject: ResolveNow – Citizen Registration Verification OTP
-    """
-    subject = "ResolveNow – Citizen Registration Verification OTP"
-    return send_otp_email_generic(recipient_email, recipient_name, otp, subject, 'registration_otp')
-
-
-# Backwards compatibility alias
-send_registration_otp = send_registration_otp_email
-
-
-def send_login_otp(recipient_email, recipient_name, otp):
-    """
-    Sends Login Verification OTP email.
-    """
-    subject = "ResolveNow – Login Verification Code"
-    return send_otp_email_generic(recipient_email, recipient_name, otp, subject, 'login_otp')
-
-
-def send_password_reset_otp(recipient_email, recipient_name, otp):
-    """
-    Sends Password Reset Verification OTP email.
-    """
-    subject = "ResolveNow – Password Reset Verification Code"
-    return send_otp_email_generic(recipient_email, recipient_name, otp, subject, 'password_reset_otp')
+        return False, "Unable to dispatch password reset email. Please contact support."

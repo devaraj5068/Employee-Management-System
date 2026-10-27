@@ -14,6 +14,7 @@ from .forms import (
     ComplaintStatusUpdateForm, 
     ComplaintAssignmentForm, 
     ComplaintPriorityUpdateForm,
+    ComplaintLocationUpdateForm,
     CategoryForm,
     SubCategoryForm
 )
@@ -199,6 +200,7 @@ def complaint_detail(request, complaint_id):
         'status_form': status_form,
         'assign_form': assign_form,
         'priority_form': priority_form,
+        'location_form': ComplaintLocationUpdateForm(instance=complaint),
         'can_manage': user.role in ['STAFF', 'ADMIN'] or user.is_superuser,
         'can_assign': user.role == 'ADMIN' or user.is_superuser or (user.role == 'STAFF' and complaint.department and complaint.department.head_of_department == user),
     }
@@ -369,6 +371,47 @@ def complaint_priority_update(request, complaint_id):
             )
 
             messages.success(request, f"Priority adjusted to {complaint.get_priority_display()}.")
+    return redirect('complaints:detail', complaint_id=complaint.complaint_id)
+
+
+@login_required
+def complaint_location_update(request, complaint_id):
+    """
+    Allows Admin or Assigned Staff to correct/update the geospatial location and address of a complaint.
+    Supports moving marker on Google Maps, map click, search, and reverse geocoding.
+    """
+    complaint = get_object_or_404(Complaint, complaint_id=complaint_id)
+    if not (request.user.role in ['ADMIN', 'STAFF'] or request.user.is_superuser):
+        messages.error(request, "Permission denied.")
+        return redirect('complaints:detail', complaint_id=complaint.complaint_id)
+
+    if request.method == 'POST':
+        form = ComplaintLocationUpdateForm(request.POST, instance=complaint)
+        if form.is_valid():
+            old_loc = f"{complaint.location_address or 'None'} ({complaint.latitude}, {complaint.longitude})"
+            complaint = form.save()
+            new_loc = f"{complaint.location_address or 'None'} ({complaint.latitude}, {complaint.longitude})"
+
+            ComplaintHistory.objects.create(
+                complaint=complaint,
+                previous_status=complaint.status,
+                new_status=complaint.status,
+                changed_by=request.user,
+                remarks=f"Incident location corrected from '{old_loc}' to '{new_loc}'."
+            )
+
+            log_activity(
+                user=request.user,
+                action='UPDATE',
+                description=f"Location coordinates corrected for {complaint.complaint_id}: {new_loc}",
+                complaint=complaint,
+                request=request
+            )
+
+            messages.success(request, "Incident location and coordinates updated successfully.")
+        else:
+            messages.error(request, "Invalid coordinates. Latitude must be between -90..90 and Longitude between -180..180.")
+
     return redirect('complaints:detail', complaint_id=complaint.complaint_id)
 
 
